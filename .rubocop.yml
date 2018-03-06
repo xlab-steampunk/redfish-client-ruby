@@ -1,0 +1,19 @@
+AllCops:
+  Exclude:
+    - redfish_client.gemspec
+    - Gemfile
+    - Rakefile
+    - bin/**
+
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+
+Style/Documentation:
+  Enabled: false
+
+Style/BracesAroundHashParameters:
+  EnforcedStyle: context_dependent
+
+Metrics/BlockLength:
+  Exclude:
+    - spec/**/*.rb
