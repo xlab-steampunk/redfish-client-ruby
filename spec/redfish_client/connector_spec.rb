@@ -57,4 +57,14 @@ RSpec.describe RedfishClient::Connector do
       expect(subject.post("/post", '{"key": "value"}').status).to eq(201)
     end
   end
+
+  context "#delete" do
+    it "returns response instance" do
+      expect(subject.delete("/delete")).to be_a Excon::Response
+    end
+
+    it "send post request" do
+      expect(subject.delete("/delete").status).to eq(204)
+    end
+  end
 end

@@ -47,5 +47,13 @@ module RedfishClient
       params[:body] = body if body
       @connection.post(params)
     end
+
+    # Issue DELETE requests to the service.
+    #
+    # @param path [String] path to the resource, relative to the base
+    # @return [Excon::Response] response object
+    def delete(path)
+      @connection.delete(path: path)
+    end
   end
 end
