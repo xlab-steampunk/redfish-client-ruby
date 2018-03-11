@@ -124,6 +124,19 @@ module RedfishClient
       @connector.post(@content["@odata.id"], payload ? payload.to_json : "")
     end
 
+    # Issue a DELETE requests to the endpoint of the resource.
+    #
+    # If the resource has no `@odata.id` field, {NoODataId} error will be
+    # raised, since deleting non-networked resources makes no sense and
+    # probably indicates bug in library consumer.
+    #
+    # @return [Excon::Response] response
+    # @raise  [NoODataId] resource has no OpenData id
+    def delete
+      raise NoODataId unless key?("@odata.id")
+      @connector.delete(@content["@odata.id"])
+    end
+
     private
 
     def key?(name)

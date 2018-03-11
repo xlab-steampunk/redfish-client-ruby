@@ -22,6 +22,7 @@ RSpec.describe RedfishClient::Resource do
         }.to_json }
     )
     Excon.stub({ path: "/", method: :post }, { status: 201 })
+    Excon.stub({ path: "/", method: :delete }, { status: 204 })
     Excon.stub(
       { path: "/sub" },
       { status: 200, body: { "x" => "y" }.to_json }
@@ -127,6 +128,16 @@ RSpec.describe RedfishClient::Resource do
 
     it "posts data to the external endpoint" do
       expect(subject.post.status).to eq(201)
+    end
+  end
+
+  context "#delete" do
+    it "returns response instance" do
+      expect(subject.delete).to be_a Excon::Response
+    end
+
+    it "posts data to the external endpoint" do
+      expect(subject.delete.status).to eq(204)
     end
   end
 end
