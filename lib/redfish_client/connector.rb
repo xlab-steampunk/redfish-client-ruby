@@ -26,7 +26,27 @@ module RedfishClient
     def initialize(url, verify = true)
       @url = url
       @verify = verify
-      @connection = Excon.new(url, headers: DEFAULT_HEADERS)
+      @headers = DEFAULT_HEADERS.dup
+      @connection = create_connection
+    end
+
+    # Add HTTP headers to the requests made by the connector.
+    #
+    # @param headers [Hash<String, String>] headers to be added
+    def add_headers(headers)
+      @headers.merge!(headers)
+      @connection = create_connection
+    end
+
+    # Remove HTTP headers from requests made by the connector.
+    #
+    # Headers that are not currently set are silently ignored and no error is
+    # raised.
+    #
+    # @param headers [List<String>] headers to remove
+    def remove_headers(headers)
+      headers.each { |h| @headers.delete(h) }
+      @connection = create_connection
     end
 
     # Issue GET request to service.
@@ -54,6 +74,12 @@ module RedfishClient
     # @return [Excon::Response] response object
     def delete(path)
       @connection.delete(path: path)
+    end
+
+    private
+
+    def create_connection
+      Excon.new(@url, headers: @headers)
     end
   end
 end
