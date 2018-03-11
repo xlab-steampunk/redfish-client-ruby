@@ -15,11 +15,13 @@ RSpec.describe RedfishClient::Resource do
       { path: "/" },
       { status: 200,
         body: {
+          "@odata.id" => "/",
           "key" => "value",
           "Members" => [{ "@odata.id" => "/sub" }],
           "data" => { "a" => "b" }
         }.to_json }
     )
+    Excon.stub({ path: "/", method: :post }, { status: 201 })
     Excon.stub(
       { path: "/sub" },
       { status: 200, body: { "x" => "y" }.to_json }
@@ -99,7 +101,8 @@ RSpec.describe RedfishClient::Resource do
 
   context "#raw" do
     it "returns raw wrapped data" do
-      expect(subject.raw).to eq("key" => "value",
+      expect(subject.raw).to eq("@odata.id" => "/",
+                                "key" => "value",
                                 "Members" => [{ "@odata.id" => "/sub" }],
                                 "data" => { "a" => "b" })
     end
@@ -114,6 +117,16 @@ RSpec.describe RedfishClient::Resource do
   context "#reset" do
     it "clears cached entries" do
       expect(subject.reset).to eq({})
+    end
+  end
+
+  context "#post" do
+    it "returns response instance" do
+      expect(subject.post).to be_a Excon::Response
+    end
+
+    it "posts data to the external endpoint" do
+      expect(subject.post.status).to eq(201)
     end
   end
 end

@@ -20,6 +20,10 @@ module RedfishClient
   # fresh values from the service, {#reset} call will flush the cache,
   # causing next access to retrieve fresh data.
   class Resource
+    # NoODataId error is raised when operation would need OpenData id of the
+    # resource to accomplish the task a hand.
+    class NoODataId < StandardError; end
+
     # Create new resource.
     #
     # Resource can be created either by passing in OpenData identifier or
@@ -100,6 +104,24 @@ module RedfishClient
     # @return [String] JSON-serialized raw data
     def to_s
       JSON.pretty_generate(@content)
+    end
+
+    # Issue a POST requests to the endpoint of the resource.
+    #
+    # In order to avoid having to manually serialize data to JSON, this
+    # function call takes Hash as a payload and encodes it before sending it
+    # to the endpoint.
+    #
+    # If the resource has no `@odata.id` field, {NoODataId} error will be
+    # raised, since posting to non-networked resources makes no sense and
+    # probably indicates bug in library consumer.
+    #
+    # @param payload [Hash<String, >] data to send
+    # @return [Excon::Response] response
+    # @raise  [NoODataId] resource has no OpenData id
+    def post(payload = nil)
+      raise NoODataId unless key?("@odata.id")
+      @connector.post(@content["@odata.id"], payload ? payload.to_json : "")
     end
 
     private
