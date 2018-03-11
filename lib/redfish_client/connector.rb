@@ -36,5 +36,16 @@ module RedfishClient
     def get(path)
       @connection.get(path: path)
     end
+
+    # Issue POST requests to the service.
+    #
+    # @param path [String] path to the resource, relative to the base
+    # @param body [String] data to be sent over the socket
+    # @return [Excon::Response] response object
+    def post(path, body = nil)
+      params = { path: path }
+      params[:body] = body if body
+      @connection.post(params)
+    end
   end
 end
