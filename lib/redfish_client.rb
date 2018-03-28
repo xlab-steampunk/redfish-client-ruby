@@ -5,8 +5,8 @@ require "redfish_client/root"
 require "redfish_client/version"
 
 module RedfishClient
-  def self.new(url, prefix = "/redfish/v1")
-    con = Connector.new(url)
+  def self.new(url, prefix: "/redfish/v1", verify: true)
+    con = Connector.new(url, verify)
     Root.new(con, oid: prefix)
   end
 end

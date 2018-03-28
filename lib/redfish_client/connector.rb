@@ -79,7 +79,7 @@ module RedfishClient
     private
 
     def create_connection
-      Excon.new(@url, headers: @headers)
+      Excon.new(@url, headers: @headers, ssl_verify_peer: @verify)
     end
   end
 end

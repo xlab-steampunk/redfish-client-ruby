@@ -25,7 +25,9 @@ Minimal program that uses this gem would look something like this:
 
     require "redfish_client"
 
-    root = RedfishClient.new("http://localhost:8000", "/redfish/v1")
+    root = RedfishClient.new("https://localhost:8000",
+                             prefix: "/redfish/v1",
+                             verify: false)
     puts root
     root.login("username", "password")
     puts root.Systems
