@@ -17,7 +17,7 @@ RSpec.describe RedfishClient::Resource do
         body: {
           "@odata.id" => "/",
           "key" => "value",
-          "Members" => [{ "@odata.id" => "/sub" }],
+          "Members" => [{ "@odata.id" => "/sub" }, { "@odata.id" => "/sub1" }],
           "data" => { "a" => "b" }
         }.to_json }
     )
@@ -25,7 +25,11 @@ RSpec.describe RedfishClient::Resource do
     Excon.stub({ path: "/", method: :delete }, { status: 204 })
     Excon.stub(
       { path: "/sub" },
-      { status: 200, body: { "x" => "y" }.to_json }
+      { status: 200, body: { "@odata.id" => "/sub", "x" => "y" }.to_json }
+    )
+    Excon.stub(
+      { path: "/sub1" },
+      { status: 200, body: { "w" => "z" }.to_json }
     )
   end
 
@@ -44,7 +48,12 @@ RSpec.describe RedfishClient::Resource do
 
     it "fetches resource from oid" do
       r = described_class.new(connector, oid: "/sub")
-      expect(r.raw).to eq("x" => "y")
+      expect(r.raw).to eq("@odata.id" => "/sub", "x" => "y")
+    end
+
+    it "add resource oid if missing" do
+      r = described_class.new(connector, oid: "/sub1")
+      expect(r.raw).to eq("@odata.id" => "/sub1", "w" => "z")
     end
   end
 
@@ -56,7 +65,11 @@ RSpec.describe RedfishClient::Resource do
     end
 
     it "indexes into members" do
-      expect(subject[0].raw).to eq("x" => "y")
+      expect(subject[0].raw).to eq("@odata.id" => "/sub", "x" => "y")
+    end
+
+    it "indexes into members with missing odata id" do
+      expect(subject[1].raw).to eq("@odata.id" => "/sub1", "w" => "z")
     end
 
     it "loads subresources on demand" do
@@ -102,10 +115,11 @@ RSpec.describe RedfishClient::Resource do
 
   context "#raw" do
     it "returns raw wrapped data" do
-      expect(subject.raw).to eq("@odata.id" => "/",
-                                "key" => "value",
-                                "Members" => [{ "@odata.id" => "/sub" }],
-                                "data" => { "a" => "b" })
+      expect(subject[0].raw).to eq("@odata.id" => "/sub", "x" => "y")
+    end
+
+    it "returns raw wrapped data with added oid" do
+      expect(subject[1].raw).to eq("@odata.id" => "/sub1", "w" => "z")
     end
   end
 

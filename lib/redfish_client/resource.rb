@@ -39,6 +39,7 @@ module RedfishClient
       if oid
         resp = connector.get(oid)
         @content = JSON.parse(resp.data[:body])
+        @content["@odata.id"] = oid
         @headers = resp.data[:headers]
       else
         @content = content
