@@ -89,6 +89,24 @@ RSpec.describe RedfishClient::Resource do
     end
   end
 
+  context "#key?" do
+    it "returns true for existing symbol" do
+      expect(subject.key?(:data)).to be true
+    end
+
+    it "returns true for existing string" do
+      expect(subject.key?("data")).to be true
+    end
+
+    it "returns false for missing symbol" do
+      expect(subject.key?(:missing)).to be false
+    end
+
+    it "returns false for missing string" do
+      expect(subject.key?("missing")).to be false
+    end
+  end
+
   context "#method_missing" do
     it "retrieves key from resource" do
       expect(subject.key).to eq("value")

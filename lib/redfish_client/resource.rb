@@ -73,6 +73,14 @@ module RedfishClient
       end
     end
 
+    # Test if resource contains required key.
+    #
+    # @param name [String, Symbol] key name to test
+    # @return [Boolean] inclusion test result
+    def key?(name)
+      @content.key?(name.to_s)
+    end
+
     # Convenience access for resource data.
     #
     # Calling `resource.Value` is exactly the same as `resource["Value"]`. The
@@ -139,10 +147,6 @@ module RedfishClient
     end
 
     private
-
-    def key?(name)
-      @content.key?(name)
-    end
 
     def cache(name)
       @cache[name] ||= build_resource(@content.fetch(name))
