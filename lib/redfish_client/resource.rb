@@ -136,9 +136,7 @@ module RedfishClient
     # @return [Excon::Response] response
     # @raise  [NoODataId] resource has no OpenData id
     def post(field: "@odata.id", path: nil, payload: nil)
-      raise NoODataId if path.nil? and !key?(field)
-      path ||= @content[field]
-      @connector.post(path, payload ? payload.to_json : "")
+      @connector.post(get_path(field, path), payload ? payload.to_json : "")
     end
 
     # Issue a DELETE requests to the endpoint of the resource.
@@ -150,11 +148,15 @@ module RedfishClient
     # @return [Excon::Response] response
     # @raise  [NoODataId] resource has no OpenData id
     def delete
-      raise NoODataId unless key?("@odata.id")
-      @connector.delete(@content["@odata.id"])
+      @connector.delete(get_path("@odata.id", nil))
     end
 
     private
+
+    def get_path(field, path)
+      raise NoODataId if path.nil? and !key?(field)
+      path || @content[field]
+    end
 
     def cache(name)
       @cache[name] ||= build_resource(@content.fetch(name))
