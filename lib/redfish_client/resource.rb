@@ -139,6 +139,20 @@ module RedfishClient
       @connector.post(get_path(field, path), payload ? payload.to_json : "")
     end
 
+    # Issue a PATCH requests to the selected endpoint.
+    #
+    # Works exactly the same as the {post} method, but issued a PATCH request
+    # to the server.
+    #
+    # @param field [String, Symbol] path lookup field
+    # @param path [String] path to patch
+    # @param payload [Hash<String, >] data to send
+    # @return [Excon::Response] response
+    # @raise  [NoODataId] resource has no OpenData id
+    def patch(field: "@odata.id", path: nil, payload: nil)
+      @connector.patch(get_path(field, path), payload ? payload.to_json : "")
+    end
+
     # Issue a DELETE requests to the endpoint of the resource.
     #
     # If the resource has no `@odata.id` field, {NoODataId} error will be

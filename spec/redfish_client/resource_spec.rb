@@ -24,6 +24,8 @@ RSpec.describe RedfishClient::Resource do
     )
     Excon.stub({ path: "/alt", method: :post }, { status: 202 })
     Excon.stub({ path: "/", method: :post }, { status: 201 })
+    Excon.stub({ path: "/alt", method: :patch }, { status: 400 })
+    Excon.stub({ path: "/", method: :patch }, { status: 401 })
     Excon.stub({ path: "/", method: :delete }, { status: 204 })
     Excon.stub(
       { path: "/sub" },
@@ -178,6 +180,32 @@ RSpec.describe RedfishClient::Resource do
 
     it "posts data to the selected path" do
       expect(subject.post(path: "/missing").status).to eq(404)
+    end
+  end
+
+  context "#patch" do
+    it "returns response instance" do
+      expect(subject.patch).to be_a Excon::Response
+    end
+
+    it "posts data to the @odata.id endpoint by default" do
+      expect(subject.patch.status).to eq(401)
+    end
+
+    it "posts data to the selected field content" do
+      expect(subject.patch(field: "alt_path").status).to eq(400)
+    end
+
+    it "posts data to the selected path" do
+      expect(subject.patch(path: "/mis").status).to eq(404)
+    end
+
+    it "posts data to the path in presence of field" do
+      expect(subject.patch(field: "alt_path", path: "/mis").status).to eq(404)
+    end
+
+    it "posts data to the selected path" do
+      expect(subject.patch(path: "/missing").status).to eq(404)
     end
   end
 
