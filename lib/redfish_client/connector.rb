@@ -68,6 +68,18 @@ module RedfishClient
       @connection.post(params)
     end
 
+    # Issue PATCH requests to the service.
+    #
+    # @param path [String] path to the resource, relative to the base
+    # @param body [String] data to be sent over the socket
+    # @return [Excon::Response] response object
+    def patch(path, body = nil)
+      params = { path: path }
+      params[:body] = body if body
+      @connection.patch(params)
+    end
+
+
     # Issue DELETE requests to the service.
     #
     # @param path [String] path to the resource, relative to the base

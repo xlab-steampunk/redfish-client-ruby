@@ -26,6 +26,8 @@ RSpec.describe RedfishClient::Connector do
     Excon.stub({ host: "example.com", path: "/forbidden" }, { status: 403 })
     Excon.stub({ host: "example.com", path: "/post", method: :post },
                { status: 201 })
+    Excon.stub({ host: "example.com", path: "/patch", method: :patch },
+               { status: 202 })
     Excon.stub({ host: "example.com", path: "/delete", method: :delete },
                { status: 204 })
   end
@@ -55,6 +57,16 @@ RSpec.describe RedfishClient::Connector do
 
     it "send post request" do
       expect(subject.post("/post", '{"key": "value"}').status).to eq(201)
+    end
+  end
+
+  context "#patch" do
+    it "returns response instance" do
+      expect(subject.patch("/patch")).to be_a Excon::Response
+    end
+
+    it "send post request" do
+      expect(subject.patch("/patch", '{"key": "value"}').status).to eq(202)
     end
   end
 
