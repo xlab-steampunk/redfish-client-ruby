@@ -115,22 +115,30 @@ module RedfishClient
       JSON.pretty_generate(@content)
     end
 
-    # Issue a POST requests to the endpoint of the resource.
+    # Issue a POST requests to the selected endpoint.
+    #
+    # By default, POST request will be sent to the path, stored in `@odata.id`
+    # field. Source field can be changed by specifying the `field` parameter
+    # when calling this function. Specifying the `path` argument will bypass
+    # the field lookup altogether and POST directly to the requested path.
     #
     # In order to avoid having to manually serialize data to JSON, this
     # function call takes Hash as a payload and encodes it before sending it
     # to the endpoint.
     #
-    # If the resource has no `@odata.id` field, {NoODataId} error will be
-    # raised, since posting to non-networked resources makes no sense and
-    # probably indicates bug in library consumer.
+    # If the resource has no lookup field, {NoODataId} error will be raised,
+    # since posting to non-networked resources makes no sense and probably
+    # indicates bug in library consumer.
     #
+    # @param field [String, Symbol] path lookup field
+    # @param path [String] path to post to
     # @param payload [Hash<String, >] data to send
     # @return [Excon::Response] response
     # @raise  [NoODataId] resource has no OpenData id
-    def post(payload = nil)
-      raise NoODataId unless key?("@odata.id")
-      @connector.post(@content["@odata.id"], payload ? payload.to_json : "")
+    def post(field: "@odata.id", path: nil, payload: nil)
+      raise NoODataId if path.nil? and !key?(field)
+      path ||= @content[field]
+      @connector.post(path, payload ? payload.to_json : "")
     end
 
     # Issue a DELETE requests to the endpoint of the resource.

@@ -23,7 +23,7 @@ module RedfishClient
     # @raise [AuthError] if user session could not be created
     def login(username, password)
       r = self.Links.Sessions.post(
-        "UserName" => username, "Password" => password
+        payload: { "UserName" => username, "Password" => password }
       )
       raise AuthError unless r.status == 201
 
