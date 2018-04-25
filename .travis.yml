@@ -1,5 +1,13 @@
 sudo: false
 language: ruby
+cache: bundler
 rvm:
-  - 2.4.3
-before_install: gem install bundler -v 1.16.1
+- 2.4.3
+deploy:
+  provider: rubygems
+  api_key:
+    secure: NdOd7EA9XQZNbnkzLFNXeJcOoaTi93uuwzjADS+fxFJ2HYGJs/T+gi98f742Oj4j187lBQjwICkdduGQjVn3BA/8YZD7sOkdywDSELupTjJmugf/hks6MiKJ0fex5GmHwspjZ7P+9iLPXGcaYWbGamWlSDL+Z/79s4bi8b5sBVwJ01YnIJvFn32/I5vPFwbwUzvH0n3HAjYHZ/kpZ122Zp/DhSpGam2azWF0Tynu7RNMsQrGamAH0mC1DzAscSD6VTyMcSMkD6XUr3GX7w7yvVO0qo7e6EcjrsJKMRC8/s2C/SWQ4pRDAldhQpd4C7/QSaHE0mmQcEYi2qsBmrbFb7cAfRmS5BKn8LSv7YPVH0VFl3fwYAycwqA068TZ68t99YPw7uVcJpDOWBODCQWA1wgV1tXHop7CJOcQW4MoXzyaRbbpF+6lyxXEgTz8Me8zEucMsHWzS9dI1E5x/bWl3TgEM9n+/G6BAcBj/mZv/dxC6H7kWp0ubKw0bRsdET/YmG53vxISaFbnLxNhsHzeE2mFeF+JL7a1amlC4aTiSBnxDgRzDdnoo42Hu8SUg/mp0xLjyoTME1w1zaB+GvmWCdrpkLQL2kNDgQUvBfOp+Zqfb37tKgc15zb7v2sru5acixkSG9UVElleDW8K4R1QcqXwLxCYccCi/ExVR1zSvSM=
+  gem: redfish_client
+  on:
+    tags: true
+    repo: xlab-si/redfish_client
