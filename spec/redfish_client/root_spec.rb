@@ -36,6 +36,10 @@ RSpec.describe RedfishClient::Root do
       { path: "/auth", headers: { "X-Auth-Token" => "token" } },
       { status: 200, body: { "key" => "val" }.to_json }
     )
+    Excon.stub(
+      { path: "/find" },
+      { status: 200, body: { "find" => "resource" }.to_json }
+    )
   end
 
   after(:all) do
@@ -57,6 +61,13 @@ RSpec.describe RedfishClient::Root do
       subject.login("user", "pass")
       subject.logout
       expect { subject.Auth }.to raise_error(Excon::Error::StubNotFound)
+    end
+  end
+
+  context "#find" do
+    it "fetches resource by OData id" do
+      res = subject.find("/find")
+      expect(res.raw).to eq("find" => "resource", "@odata.id" => "/find")
     end
   end
 end

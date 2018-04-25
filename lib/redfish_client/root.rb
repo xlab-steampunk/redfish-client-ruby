@@ -43,5 +43,13 @@ module RedfishClient
       @session = nil
       @connector.remove_headers([AUTH_HEADER])
     end
+
+    # Find Redfish service object by OData ID field.
+    #
+    # @param oid [String] Odata id of the resource
+    # @return [Resource] new resource
+    def find(oid)
+      Resource.new(@connector, oid: oid)
+    end
   end
 end
