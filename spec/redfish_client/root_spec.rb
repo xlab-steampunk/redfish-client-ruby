@@ -58,50 +58,52 @@ RSpec.describe RedfishClient::Root do
     Excon.stubs.clear
   end
 
+  subject(:root) do
+    connector = RedfishClient::Connector.new("http://example.com")
+    described_class.new(connector, oid: "/")
+  end
+
   context "with sessions" do
-    let(:connector) { RedfishClient::Connector.new("http://example.com") }
-    subject { described_class.new(connector, oid: "/") }
-    before { subject.login("user", "pass") }
+    before { root.login("user", "pass") }
 
     context "#login" do
       it "authenticates user against service" do
-        expect(subject.Auth.key).to eq("val")
+        expect(root.Auth.key).to eq("val")
       end
     end
 
     context "#logout" do
       it "terminates user session" do
-        subject.logout
-        expect { subject.Auth }.to raise_error(Excon::Error::StubNotFound)
+        root.logout
+        expect { root.Auth }.to raise_error(Excon::Error::StubNotFound)
       end
     end
   end
 
   context "without sessions" do
-    let(:connector) { RedfishClient::Connector.new("http://example.com") }
-    subject { described_class.new(connector, oid: "/basic_root") }
-    before { subject.login("user", "pass") }
+    subject(:root) do
+      connector = RedfishClient::Connector.new("http://example.com")
+      described_class.new(connector, oid: "/basic_root")
+    end
+    before { root.login("user", "pass") }
 
     context "#login" do
       it "authenticates user against service" do
-        expect(subject.res.key).to eq("basic_val")
+        expect(root.res.key).to eq("basic_val")
       end
     end
 
     context "#logout" do
       it "terminates user session" do
-        subject.logout
-        expect(subject.res.error).to eq("no auth")
+        root.logout
+        expect(root.res.error).to eq("no auth")
       end
     end
   end
 
-  let(:connector) { RedfishClient::Connector.new("http://example.com") }
-  subject { described_class.new(connector, oid: "/") }
-
   context "#find" do
     it "fetches resource by OData id" do
-      res = subject.find("/find")
+      res = root.find("/find")
       expect(res.raw).to eq("find" => "resource", "@odata.id" => "/find")
     end
   end
