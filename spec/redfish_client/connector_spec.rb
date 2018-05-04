@@ -36,47 +36,47 @@ RSpec.describe RedfishClient::Connector do
     Excon.stubs.clear
   end
 
-  subject { described_class.new("http://example.com") }
+  subject(:connector) { described_class.new("http://example.com") }
 
   context "#get" do
     it "returns response instance" do
-      expect(subject.get("/")).to be_a Excon::Response
+      expect(connector.get("/")).to be_a Excon::Response
     end
 
     it "keeps host stored" do
-      expect(subject.get("/missing").status).to eq(404)
-      expect(subject.get("/forbidden").status).to eq(403)
-      expect(subject.get("/").status).to eq(200)
+      expect(connector.get("/missing").status).to eq(404)
+      expect(connector.get("/forbidden").status).to eq(403)
+      expect(connector.get("/").status).to eq(200)
     end
   end
 
   context "#post" do
     it "returns response instance" do
-      expect(subject.post("/post")).to be_a Excon::Response
+      expect(connector.post("/post")).to be_a Excon::Response
     end
 
     it "send post request" do
-      expect(subject.post("/post", '{"key": "value"}').status).to eq(201)
+      expect(connector.post("/post", '{"key": "value"}').status).to eq(201)
     end
   end
 
   context "#patch" do
     it "returns response instance" do
-      expect(subject.patch("/patch")).to be_a Excon::Response
+      expect(connector.patch("/patch")).to be_a Excon::Response
     end
 
     it "send post request" do
-      expect(subject.patch("/patch", '{"key": "value"}').status).to eq(202)
+      expect(connector.patch("/patch", '{"key": "value"}').status).to eq(202)
     end
   end
 
   context "#delete" do
     it "returns response instance" do
-      expect(subject.delete("/delete")).to be_a Excon::Response
+      expect(connector.delete("/delete")).to be_a Excon::Response
     end
 
     it "send post request" do
-      expect(subject.delete("/delete").status).to eq(204)
+      expect(connector.delete("/delete").status).to eq(204)
     end
   end
 end
