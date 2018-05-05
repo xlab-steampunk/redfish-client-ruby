@@ -168,7 +168,7 @@ module RedfishClient
     private
 
     def get_path(field, path)
-      raise NoODataId if path.nil? and !key?(field)
+      raise NoODataId if path.nil? && !key?(field)
       path || @content[field]
     end
 

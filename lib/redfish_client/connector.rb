@@ -79,7 +79,6 @@ module RedfishClient
       @connection.patch(params)
     end
 
-
     # Issue DELETE requests to the service.
     #
     # @param path [String] path to the resource, relative to the base
