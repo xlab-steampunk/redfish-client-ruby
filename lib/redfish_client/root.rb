@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "base64"
+require "json"
 require "redfish_client/resource"
 
 module RedfishClient
@@ -57,8 +58,9 @@ module RedfishClient
     end
 
     def session_login(username, password)
-      r = self.Links.Sessions.post(
-        payload: { "UserName" => username, "Password" => password }
+      r = @connector.post(
+        @content["Links"]["Sessions"]["@odata.id"],
+        { "UserName" => username, "Password" => password }.to_json
       )
       raise AuthError, "Invalid credentials" unless r.status == 201
 
