@@ -16,7 +16,8 @@ RSpec.describe RedfishClient::Root do
     )
     Excon.stub(
       { path: "/sess",
-        method: :get },
+        method: :get,
+        headers: { "Authorization" => "Basic dXNlcjpwYXNz" } },
       { status: 200,
         body: { "@odata.id": "/sess" }.to_json }
     )
