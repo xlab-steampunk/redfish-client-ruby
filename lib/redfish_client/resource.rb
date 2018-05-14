@@ -136,7 +136,7 @@ module RedfishClient
     # @return [Excon::Response] response
     # @raise  [NoODataId] resource has no OpenData id
     def post(field: "@odata.id", path: nil, payload: nil)
-      @connector.post(get_path(field, path), payload ? payload.to_json : "")
+      @connector.post(get_path(field, path), payload)
     end
 
     # Issue a PATCH requests to the selected endpoint.
@@ -150,7 +150,7 @@ module RedfishClient
     # @return [Excon::Response] response
     # @raise  [NoODataId] resource has no OpenData id
     def patch(field: "@odata.id", path: nil, payload: nil)
-      @connector.patch(get_path(field, path), payload ? payload.to_json : "")
+      @connector.patch(get_path(field, path), payload)
     end
 
     # Issue a DELETE requests to the endpoint of the resource.

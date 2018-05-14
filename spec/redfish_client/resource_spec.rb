@@ -7,12 +7,15 @@ require "redfish_client/resource"
 
 RSpec.describe RedfishClient::Resource do
   before(:all) do
+    r_headers = { "Accept" => "application/json", "OData-Version" => "4.0" }
+    w_headers = r_headers.merge("Content-Type" => "application/json")
+    host = "example.com"
+
     Excon.defaults[:mock] = true
     # Stubs are pushed onto a stack - they match from bottom-up. So place
     # least specific stub first in order to avoid staring blankly at errors.
-    Excon.stub({}, { status: 404 })
     Excon.stub(
-      { path: "/" },
+      { path: "/", headers: r_headers, host: host },
       { status: 200,
         body: {
           "@odata.id" => "/",
@@ -22,18 +25,55 @@ RSpec.describe RedfishClient::Resource do
           "alt_path" => "/alt"
         }.to_json }
     )
-    Excon.stub({ path: "/alt", method: :post }, { status: 202 })
-    Excon.stub({ path: "/", method: :post }, { status: 201 })
-    Excon.stub({ path: "/alt", method: :patch }, { status: 400 })
-    Excon.stub({ path: "/", method: :patch }, { status: 401 })
-    Excon.stub({ path: "/", method: :delete }, { status: 204 })
     Excon.stub(
-      { path: "/sub" },
+      { path: "/", method: :post, headers: w_headers, host: host },
+      { status: 201 }
+    )
+    Excon.stub(
+      { path: "/", method: :post, headers: r_headers, host: host },
+      { status: 203 }
+    )
+    Excon.stub(
+      { path: "/", method: :patch, headers: r_headers, host: host },
+      { status: 401 }
+    )
+    Excon.stub(
+      { path: "/", method: :delete, headers: r_headers, host: host },
+      { status: 204 }
+    )
+    Excon.stub(
+      { path: "/missing", headers: r_headers, host: host },
+      { status: 404 }
+    )
+    Excon.stub(
+      { path: "/missing", headers: w_headers, host: host },
+      { status: 403 }
+    )
+    Excon.stub(
+      { path: "/alt", method: :post, headers: r_headers, host: host },
+      { status: 202 }
+    )
+    Excon.stub(
+      { path: "/alt", method: :patch, headers: r_headers, host: host },
+      { status: 400 }
+    )
+    Excon.stub(
+      { path: "/sub", headers: r_headers, host: host },
       { status: 200, body: { "@odata.id" => "/sub", "x" => "y" }.to_json }
     )
     Excon.stub(
-      { path: "/sub1" },
+      { path: "/sub1", headers: r_headers, host: host },
       { status: 200, body: { "w" => "z" }.to_json }
+    )
+    Excon.stub(
+      { path: "/json", method: :post, headers: w_headers, host: host,
+        body: { "key" => "value" }.to_json },
+      { status: 203 }
+    )
+    Excon.stub(
+      { path: "/pjson", method: :patch, headers: w_headers, host: host,
+        body: { "k" => "v" }.to_json },
+      { status: 205 }
     )
   end
 
@@ -166,23 +206,25 @@ RSpec.describe RedfishClient::Resource do
     end
 
     it "posts data to the @odata.id endpoint by default" do
-      expect(resource.post.status).to eq(201)
+      expect(resource.post.status).to eq(203)
     end
 
     it "posts data to the selected field content" do
       expect(resource.post(field: "alt_path").status).to eq(202)
     end
 
-    it "posts data to the selected path" do
-      expect(resource.post(path: "/mis").status).to eq(404)
-    end
-
     it "posts data to the path in presence of field" do
-      expect(resource.post(field: "alt_path", path: "/mis").status).to eq(404)
+      expect(resource.post(field: "alt_path", path: "/missing").status)
+        .to eq(404)
     end
 
     it "posts data to the selected path" do
       expect(resource.post(path: "/missing").status).to eq(404)
+    end
+
+    it "JSON encodes data" do
+      params = { path: "/json", payload: { "key" => "value" } }
+      expect(resource.post(params).status).to eq(203)
     end
   end
 
@@ -199,16 +241,18 @@ RSpec.describe RedfishClient::Resource do
       expect(resource.patch(field: "alt_path").status).to eq(400)
     end
 
-    it "posts data to the selected path" do
-      expect(resource.patch(path: "/mis").status).to eq(404)
-    end
-
     it "posts data to the path in presence of field" do
-      expect(resource.patch(field: "alt_path", path: "/mis").status).to eq(404)
+      expect(resource.patch(field: "alt_path", path: "/missing").status)
+        .to eq(404)
     end
 
     it "posts data to the selected path" do
       expect(resource.patch(path: "/missing").status).to eq(404)
+    end
+
+    it "JSON encodes data" do
+      params = { path: "/pjson", payload: { "k" => "v" } }
+      expect(resource.patch(params).status).to eq(205)
     end
   end
 

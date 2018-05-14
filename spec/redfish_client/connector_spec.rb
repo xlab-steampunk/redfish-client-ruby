@@ -26,8 +26,22 @@ RSpec.describe RedfishClient::Connector do
     Excon.stub({ host: "example.com", path: "/forbidden" }, { status: 403 })
     Excon.stub({ host: "example.com", path: "/post", method: :post },
                { status: 201 })
+    Excon.stub(
+      { host: "example.com",
+        path: "/json",
+        method: :post,
+        body: { "key" => "value" }.to_json },
+      { status: 203 }
+    )
     Excon.stub({ host: "example.com", path: "/patch", method: :patch },
                { status: 202 })
+    Excon.stub(
+      { host: "example.com",
+        path: "/pjson",
+        method: :patch,
+        body: { "k" => "v" }.to_json },
+      { status: 205 }
+    )
     Excon.stub({ host: "example.com", path: "/delete", method: :delete },
                { status: 204 })
   end
@@ -56,7 +70,11 @@ RSpec.describe RedfishClient::Connector do
     end
 
     it "send post request" do
-      expect(connector.post("/post", '{"key": "value"}').status).to eq(201)
+      expect(connector.post("/post").status).to eq(201)
+    end
+
+    it "JSON encodes data" do
+      expect(connector.post("/json", "key" => "value").status).to eq(203)
     end
   end
 
@@ -67,6 +85,10 @@ RSpec.describe RedfishClient::Connector do
 
     it "send post request" do
       expect(connector.patch("/patch", '{"key": "value"}').status).to eq(202)
+    end
+
+    it "JSON encodes data" do
+      expect(connector.patch("/pjson", "k" => "v").status).to eq(205)
     end
   end
 

@@ -25,9 +25,8 @@ module RedfishClient
     # @param verify [Boolean] verify SSL certificate of the service
     def initialize(url, verify = true)
       @url = url
-      @verify = verify
       @headers = DEFAULT_HEADERS.dup
-      @connection = create_connection
+      @connection = Excon.new(@url, ssl_verify_peer: verify)
     end
 
     # Add HTTP headers to the requests made by the connector.
@@ -35,7 +34,6 @@ module RedfishClient
     # @param headers [Hash<String, String>] headers to be added
     def add_headers(headers)
       @headers.merge!(headers)
-      @connection = create_connection
     end
 
     # Remove HTTP headers from requests made by the connector.
@@ -46,7 +44,6 @@ module RedfishClient
     # @param headers [List<String>] headers to remove
     def remove_headers(headers)
       headers.each { |h| @headers.delete(h) }
-      @connection = create_connection
     end
 
     # Issue GET request to service.
@@ -54,29 +51,25 @@ module RedfishClient
     # @param path [String] path to the resource, relative to the base url
     # @return [Excon::Response] response object
     def get(path)
-      @connection.get(path: path)
+      @connection.get(path: path, headers: @headers)
     end
 
     # Issue POST requests to the service.
     #
     # @param path [String] path to the resource, relative to the base
-    # @param body [String] data to be sent over the socket
+    # @param data [Hash] data to be sent over the socket, JSON encoded
     # @return [Excon::Response] response object
-    def post(path, body = nil)
-      params = { path: path }
-      params[:body] = body if body
-      @connection.post(params)
+    def post(path, data = nil)
+      @connection.post(prepare_request_params(path, data))
     end
 
     # Issue PATCH requests to the service.
     #
     # @param path [String] path to the resource, relative to the base
-    # @param body [String] data to be sent over the socket
+    # @param data [Hash] data to be sent over the socket
     # @return [Excon::Response] response object
-    def patch(path, body = nil)
-      params = { path: path }
-      params[:body] = body if body
-      @connection.patch(params)
+    def patch(path, data = nil)
+      @connection.patch(prepare_request_params(path, data))
     end
 
     # Issue DELETE requests to the service.
@@ -84,13 +77,20 @@ module RedfishClient
     # @param path [String] path to the resource, relative to the base
     # @return [Excon::Response] response object
     def delete(path)
-      @connection.delete(path: path)
+      @connection.delete(path: path, headers: @headers)
     end
 
     private
 
-    def create_connection
-      Excon.new(@url, headers: @headers, ssl_verify_peer: @verify)
+    def prepare_request_params(path, data)
+      params = { path: path }
+      if data
+        params[:body] = data.to_json
+        params[:headers] = @headers.merge("Content-Type" => "application/json")
+      else
+        params[:headers] = @headers
+      end
+      params
     end
   end
 end

@@ -60,7 +60,7 @@ module RedfishClient
     def session_login(username, password)
       r = @connector.post(
         @content["Links"]["Sessions"]["@odata.id"],
-        { "UserName" => username, "Password" => password }.to_json
+        "UserName" => username, "Password" => password
       )
       raise AuthError, "Invalid credentials" unless r.status == 201
 
