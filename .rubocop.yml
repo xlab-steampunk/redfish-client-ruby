@@ -6,6 +6,9 @@ AllCops:
     - Rakefile
     - bin/**
 
+Layout/MultilineOperationIndentation:
+  EnforcedStyle: indented
+
 Style/StringLiterals:
   EnforcedStyle: double_quotes
 
