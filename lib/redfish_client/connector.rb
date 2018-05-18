@@ -26,7 +26,11 @@ module RedfishClient
     def initialize(url, verify = true)
       @url = url
       @headers = DEFAULT_HEADERS.dup
-      @connection = Excon.new(@url, ssl_verify_peer: verify)
+      middlewares = Excon.defaults[:middlewares] +
+        [Excon::Middleware::RedirectFollower]
+      @connection = Excon.new(@url,
+                              ssl_verify_peer: verify,
+                              middlewares: middlewares)
     end
 
     # Add HTTP headers to the requests made by the connector.

@@ -44,6 +44,8 @@ RSpec.describe RedfishClient::Connector do
     )
     Excon.stub({ host: "example.com", path: "/delete", method: :delete },
                { status: 204 })
+    Excon.stub({ host: "example.com", path: "/redirect", method: :get },
+               { status: 302, headers: { "Location" => "/" } })
   end
 
   after(:all) do
@@ -61,6 +63,10 @@ RSpec.describe RedfishClient::Connector do
       expect(connector.get("/missing").status).to eq(404)
       expect(connector.get("/forbidden").status).to eq(403)
       expect(connector.get("/").status).to eq(200)
+    end
+
+    it "follows redirect" do
+      expect(connector.get("/redirect").status).to eq(200)
     end
   end
 
