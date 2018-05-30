@@ -46,8 +46,19 @@ module RedfishClient
     # Find Redfish service object by OData ID field.
     #
     # @param oid [String] Odata id of the resource
-    # @return [Resource] new resource
+    # @return [Resource, nil] new resource or nil if resource cannot be found
     def find(oid)
+      find!(oid)
+    rescue NoResource
+      nil
+    end
+
+    # Find Redfish service object by OData ID field.
+    #
+    # @param oid [String] Odata id of the resource
+    # @return [Resource] new resource
+    # @raise [NoResource] resource cannot be fetched
+    def find!(oid)
       Resource.new(@connector, oid: oid)
     end
 
