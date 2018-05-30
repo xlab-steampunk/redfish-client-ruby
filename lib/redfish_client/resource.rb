@@ -28,6 +28,9 @@ module RedfishClient
     # resource.
     class NoResource < StandardError; end
 
+    # Headers, returned from the service when resource has been constructed.
+    attr_reader :headers
+
     # Create new resource.
     #
     # Resource can be created either by passing in OpenData identifier or
