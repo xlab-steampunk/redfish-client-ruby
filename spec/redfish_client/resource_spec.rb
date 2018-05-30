@@ -271,4 +271,10 @@ RSpec.describe RedfishClient::Resource do
       expect(resource.delete.status).to eq(204)
     end
   end
+
+  context "#headers" do
+    it "returns response headers, set at init time" do
+      expect(resource.headers).to eq({})
+    end
+  end
 end
