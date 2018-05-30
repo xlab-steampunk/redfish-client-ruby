@@ -24,6 +24,10 @@ module RedfishClient
     # resource to accomplish the task a hand.
     class NoODataId < StandardError; end
 
+    # NoResource error is raised if the service cannot find requested
+    # resource.
+    class NoResource < StandardError; end
+
     # Create new resource.
     #
     # Resource can be created either by passing in OpenData identifier or
@@ -34,19 +38,17 @@ module RedfishClient
     # @param connector [RedfishClient::Connector] connector that will be used
     #   to fetch the resources
     # @param oid [String] OpenData id of the resource
-    # @param content [Hash]
+    # @param content [Hash] content to populate resource with
+    # @raise [NoResource] resource cannot be retrieved from the service
     def initialize(connector, oid: nil, content: nil)
+      @cache = {}
+      @connector = connector
+
       if oid
-        resp = connector.get(oid)
-        @content = JSON.parse(resp.data[:body])
-        @content["@odata.id"] = oid
-        @headers = resp.data[:headers]
+        initialize_from_service(oid)
       else
         @content = content
       end
-
-      @cache = {}
-      @connector = connector
     end
 
     # Access resource content.
@@ -166,6 +168,15 @@ module RedfishClient
     end
 
     private
+
+    def initialize_from_service(oid)
+      resp = @connector.get(oid)
+      raise NoResource unless resp.status == 200
+
+      @content = JSON.parse(resp.data[:body])
+      @content["@odata.id"] = oid
+      @headers = resp.data[:headers]
+    end
 
     def get_path(field, path)
       raise NoODataId if path.nil? && !key?(field)
