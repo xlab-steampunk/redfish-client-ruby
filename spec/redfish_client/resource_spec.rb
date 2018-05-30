@@ -104,6 +104,12 @@ RSpec.describe RedfishClient::Resource do
       r = described_class.new(connector, oid: "/sub1")
       expect(r.raw).to eq("@odata.id" => "/sub1", "w" => "z")
     end
+
+    it "errors out on service error" do
+      connector = RedfishClient::Connector.new("http://example.com")
+      expect { described_class.new(connector, oid: "/missing") }
+        .to raise_error(RedfishClient::Resource::NoResource)
+    end
   end
 
   context "#[]" do

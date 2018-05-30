@@ -97,7 +97,8 @@ RSpec.describe RedfishClient::Root do
     context "#logout" do
       it "terminates user session" do
         root.logout
-        expect(root.res.error).to eq("no auth")
+        expect { root.res.error }
+          .to raise_error(RedfishClient::Resource::NoResource)
       end
     end
   end
