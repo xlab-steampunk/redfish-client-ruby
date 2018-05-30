@@ -108,5 +108,21 @@ RSpec.describe RedfishClient::Root do
       res = root.find("/find")
       expect(res.raw).to eq("find" => "resource", "@odata.id" => "/find")
     end
+
+    it "returns nil on error" do
+      expect(root.find("/basic")).to be_nil
+    end
+  end
+
+  context "#find!" do
+    it "fetches resource by OData id" do
+      res = root.find!("/find")
+      expect(res.raw).to eq("find" => "resource", "@odata.id" => "/find")
+    end
+
+    it "raises exception on error" do
+      expect { root.find!("/basic") }
+          .to raise_error(RedfishClient::Resource::NoResource)
+    end
   end
 end
