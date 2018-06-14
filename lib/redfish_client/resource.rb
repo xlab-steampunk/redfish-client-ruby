@@ -64,18 +64,30 @@ module RedfishClient
     # Members array. This means that `res["Members"][3]` can be shortened into
     # `res[3]`.
     #
-    # Accessing non-existent or indexing non-collection resource key will
-    # raise `KeyError`. Accessing invalid index will raise `IndexError`.
+    # Indexing non-collection resource key will # raise `KeyError`.
     #
     # @param attr [String, Integer] key or index for accessing data
-    # @return associated value
+    # @return associated value or `nil` if attr is missing
     def [](attr)
       if attr.is_a?(Integer)
         raise(KeyError, "Not a collection.") unless key?("Members")
-        cache("Members").fetch(attr)
+        cache("Members")[attr]
       else
         cache(attr)
       end
+    end
+
+    # Safely access nested resource content.
+    #
+    # This function is an equivalent of safe navigation operator that can be
+    # used with arbitrary keys.
+    #
+    # Calling `res.dig("a", "b", "c")` is equivalent to `res.a&.b&.c` and
+    # `res["a"] && res["a"]["b"] && res["a"]["b"]["c"]`.
+    # @params keys [Array<Symbol, String>] sequence of keys to access
+    # @return associated value or `nil` if any key is missing
+    def dig(*keys)
+      keys.reduce(self) { |a, k| a.nil? ? nil : a[k] }
     end
 
     # Test if resource contains required key.
@@ -88,12 +100,9 @@ module RedfishClient
 
     # Convenience access for resource data.
     #
-    # Calling `resource.Value` is exactly the same as `resource["Value"]`. The
-    # only difference is that accessing non-existent field will raise
-    # NoMethodError instead of KeyError as `[]` method does.
-    def method_missing(symbol, *args, &block)
-      name = symbol.to_s
-      key?(name) ? self[name] : super
+    # Calling `resource.Value` is exactly the same as `resource["Value"]`.
+    def method_missing(symbol, *_args, &_block)
+      self[symbol.to_s]
     end
 
     def respond_to_missing?(symbol, include_private = false)
@@ -187,10 +196,12 @@ module RedfishClient
     end
 
     def cache(name)
-      @cache[name] ||= build_resource(@content.fetch(name))
+      @cache[name] ||= build_resource(@content[name])
     end
 
     def build_resource(data)
+      return nil if data.nil?
+
       case data
       when Hash then build_hash_resource(data)
       when Array then data.collect { |d| build_resource(d) }
@@ -204,6 +215,8 @@ module RedfishClient
       else
         Resource.new(@connector, content: data)
       end
+    rescue NoResource
+      nil
     end
   end
 end

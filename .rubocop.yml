@@ -9,6 +9,10 @@ AllCops:
 Layout/MultilineOperationIndentation:
   EnforcedStyle: indented
 
+Style/MethodMissing:
+  Exclude:
+    - lib/redfish_client/resource.rb
+
 Style/StringLiterals:
   EnforcedStyle: double_quotes
 
