@@ -1,6 +1,6 @@
 # Redfish Ruby Client
 
-[![Build Status](https://travis-ci.org/xlab-si/redfish_client.svg?branch=master)](https://travis-ci.org/xlab-si/redfish_client)
+[![Build Status](https://travis-ci.org/xlab-si/redfish-client-ruby.svg?branch=master)](https://travis-ci.org/xlab-si/redfish-client-ruby)
 [![Maintainability](https://api.codeclimate.com/v1/badges/ce990310be22db90c3e2/maintainability)](https://codeclimate.com/github/xlab-si/redfish_client/maintainability)
 [![Test Coverage](https://api.codeclimate.com/v1/badges/ce990310be22db90c3e2/test_coverage)](https://codeclimate.com/github/xlab-si/redfish_client/test_coverage)
 [![Dependency Status](https://beta.gemnasium.com/badges/github.com/xlab-si/redfish_client.svg)](https://beta.gemnasium.com/projects/github.com/xlab-si/redfish_client)
