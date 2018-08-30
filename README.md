@@ -1,8 +1,8 @@
 # Redfish Ruby Client
 
-[![Build Status](https://travis-ci.org/xlab-si/redfish_client.svg?branch=master)](https://travis-ci.org/xlab-si/redfish_client)
-[![Maintainability](https://api.codeclimate.com/v1/badges/ce990310be22db90c3e2/maintainability)](https://codeclimate.com/github/xlab-si/redfish_client/maintainability)
-[![Test Coverage](https://api.codeclimate.com/v1/badges/ce990310be22db90c3e2/test_coverage)](https://codeclimate.com/github/xlab-si/redfish_client/test_coverage)
+[![Build Status](https://travis-ci.org/xlab-si/redfish-client-ruby.svg?branch=master)](https://travis-ci.org/xlab-si/redfish-client-ruby)
+[![Maintainability](https://api.codeclimate.com/v1/badges/884ef5e8d68dff90567f/maintainability)](https://codeclimate.com/github/xlab-si/redfish-client-ruby/maintainability)
+[![Test Coverage](https://api.codeclimate.com/v1/badges/884ef5e8d68dff90567f/test_coverage)](https://codeclimate.com/github/xlab-si/redfish-client-ruby/test_coverage)
 [![Dependency Status](https://beta.gemnasium.com/badges/github.com/xlab-si/redfish_client.svg)](https://beta.gemnasium.com/projects/github.com/xlab-si/redfish_client)
 [![security](https://hakiri.io/github/xlab-si/redfish_client/master.svg)](https://hakiri.io/github/xlab-si/redfish_client/master)
 
