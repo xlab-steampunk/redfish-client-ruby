@@ -59,22 +59,10 @@ module RedfishClient
     # This function offers a way of accessing resource data in the same way
     # that hash exposes its content.
     #
-    # In addition to accessing values associated with keys, this function can
-    # also be used to access members of collection by directly indexing into
-    # Members array. This means that `res["Members"][3]` can be shortened into
-    # `res[3]`.
-    #
-    # Indexing non-collection resource key will # raise `KeyError`.
-    #
-    # @param attr [String, Integer] key or index for accessing data
+    # @param attr [String] key for accessing data
     # @return associated value or `nil` if attr is missing
     def [](attr)
-      if attr.is_a?(Integer)
-        raise(KeyError, "Not a collection.") unless key?("Members")
-        cache("Members")[attr]
-      else
-        cache(attr)
-      end
+      cache(attr)
     end
 
     # Safely access nested resource content.
