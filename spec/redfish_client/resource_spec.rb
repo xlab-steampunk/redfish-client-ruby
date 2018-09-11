@@ -117,14 +117,6 @@ RSpec.describe RedfishClient::Resource do
       expect(resource["key"]).to eq("value")
     end
 
-    it "indexes into members" do
-      expect(resource[0].raw).to eq("@odata.id" => "/sub", "x" => "y")
-    end
-
-    it "indexes into members with missing odata id" do
-      expect(resource[1].raw).to eq("@odata.id" => "/sub1", "w" => "z")
-    end
-
     it "loads subresources on demand" do
       expect(resource["data"]).to be_a described_class
     end
@@ -132,27 +124,11 @@ RSpec.describe RedfishClient::Resource do
     it "returns nil on missing key" do
       expect(resource["missing"]).to be_nil
     end
-
-    it "errors out on indexing non-collection" do
-      expect { resource[0][0] }.to raise_error(KeyError)
-    end
-
-    it "returns nil when index is out of range" do
-      expect(resource[3]).to be_nil
-    end
   end
 
   context "#dig" do
     it "retrieves key from resource" do
       expect(resource.dig("key")).to eq("value")
-    end
-
-    it "indexes into members" do
-      expect(resource.dig(0).raw).to eq("@odata.id" => "/sub", "x" => "y")
-    end
-
-    it "indexes into members with missing odata id" do
-      expect(resource.dig(1).raw).to eq("@odata.id" => "/sub1", "w" => "z")
     end
 
     it "loads subresources on demand" do
@@ -163,24 +139,16 @@ RSpec.describe RedfishClient::Resource do
       expect(resource.dig("missing")).to be_nil
     end
 
-    it "returns nil when index is out of range" do
-      expect(resource.dig(3)).to be_nil
-    end
-
     it "loads nested keys" do
       expect(resource.dig("data", "a")).to eq("b")
     end
 
     it "loads nested keys and indices" do
-      expect(resource.dig(0, "x")).to eq("y")
+      expect(resource.dig("Members", 0, "x")).to eq("y")
     end
 
     it "skips any keys after first nil value" do
-      expect(resource.dig(4, "a", "b", 3)).to be_nil
-    end
-
-    it "errors out on indexing non-collection" do
-      expect { resource.dig(0, 0) }.to raise_error(KeyError)
+      expect(resource.dig("Members", 4, "a", "b", 3)).to be_nil
     end
   end
 
@@ -228,17 +196,18 @@ RSpec.describe RedfishClient::Resource do
 
   context "#raw" do
     it "returns raw wrapped data" do
-      expect(resource[0].raw).to eq("@odata.id" => "/sub", "x" => "y")
+      expect(resource.Members[0].raw).to eq("@odata.id" => "/sub", "x" => "y")
     end
 
     it "returns raw wrapped data with added oid" do
-      expect(resource[1].raw).to eq("@odata.id" => "/sub1", "w" => "z")
+      expect(resource.Members[1].raw).to eq("@odata.id" => "/sub1", "w" => "z")
     end
   end
 
   context "#to_s" do
     it "dumps content to json" do
-      expect(JSON.parse(resource[0].to_s)).to eq(resource[0].raw)
+      expect(JSON.parse(resource.Members[0].to_s))
+        .to eq(resource.Members[0].raw)
     end
   end
 
