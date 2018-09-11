@@ -16,7 +16,7 @@ module RedfishClient
   # resource from the API.
   #
   # In order to reduce the amount of requests being sent to the service,
-  # resource also caches responses for later reuse. If we would like to get
+  # resource can also utilise caching connector. If we would like to get
   # fresh values from the service, {#reset} call will flush the cache,
   # causing next access to retrieve fresh data.
   class Resource
@@ -44,7 +44,6 @@ module RedfishClient
     # @param content [Hash] content to populate resource with
     # @raise [NoResource] resource cannot be retrieved from the service
     def initialize(connector, oid: nil, content: nil)
-      @cache = {}
       @connector = connector
 
       if oid
@@ -62,7 +61,7 @@ module RedfishClient
     # @param attr [String] key for accessing data
     # @return associated value or `nil` if attr is missing
     def [](attr)
-      cache(attr)
+      build_resource(@content[attr])
     end
 
     # Safely access nested resource content.
@@ -97,10 +96,11 @@ module RedfishClient
       key?(symbol.to_s) || super
     end
 
-    # Clear the cached sub-resources. Next sub-resource access will repopulate
-    # the cache.
+    # Clear the cached sub-resources.
+    #
+    # This method is a no-op if connector in use does not support caching.
     def reset
-      @cache = {}
+      @connector.reset if @connector.respond_to?(:reset)
     end
 
     # Access raw JSON data that resource wraps.
@@ -181,10 +181,6 @@ module RedfishClient
     def get_path(field, path)
       raise NoODataId if path.nil? && !key?(field)
       path || @content[field]
-    end
-
-    def cache(name)
-      @cache[name] ||= build_resource(@content[name])
     end
 
     def build_resource(data)

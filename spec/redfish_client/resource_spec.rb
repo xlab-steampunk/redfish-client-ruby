@@ -3,6 +3,7 @@
 require "json"
 
 require "redfish_client/connector"
+require "redfish_client/caching_connector"
 require "redfish_client/resource"
 
 RSpec.describe RedfishClient::Resource do
@@ -212,8 +213,14 @@ RSpec.describe RedfishClient::Resource do
   end
 
   context "#reset" do
-    it "clears cached entries" do
-      expect(resource.reset).to eq({})
+    it "ignores non-caching connectors" do
+      expect { subject.reset }.not_to raise_error
+    end
+
+    it "clears cache of caching connectors" do
+      connector = RedfishClient::CachingConnector.new("http://example.com")
+      client = described_class.new(connector, oid: "/")
+      expect { client.reset }.not_to raise_error
     end
   end
 
