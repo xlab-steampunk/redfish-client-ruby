@@ -121,7 +121,7 @@ RSpec.describe RedfishClient::Root do
 
     it "raises exception on error" do
       expect { root.find!("/basic") }
-          .to raise_error(RedfishClient::Resource::NoResource)
+        .to raise_error(RedfishClient::Resource::NoResource)
     end
   end
 end
