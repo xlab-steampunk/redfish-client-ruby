@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require "excon"
+
+require "redfish_client/event_listener"
 require "redfish_client/root"
 
 RSpec.describe RedfishClient::Root do
@@ -10,6 +12,7 @@ RSpec.describe RedfishClient::Root do
       { path: "/" },
       { status: 200,
         body: {
+          "EventService" => { "ServerSentEventUri" => "http://127.0.0.1" },
           "Links" => { "Sessions" => { "@odata.id" => "/sess" } },
           "Auth" => { "@odata.id" => "/auth" }
         }.to_json }
@@ -122,6 +125,19 @@ RSpec.describe RedfishClient::Root do
     it "raises exception on error" do
       expect { root.find!("/basic") }
         .to raise_error(RedfishClient::Resource::NoResource)
+    end
+  end
+
+  context "#event_listener" do
+    it "returns event listener" do
+      expect(root.event_listener)
+        .to be_an_instance_of(RedfishClient::EventListener)
+    end
+
+    it "returns nil if SSE is not supported" do
+      connector = RedfishClient::Connector.new("http://example.com")
+      root = described_class.new(connector, oid: "/basic_root")
+      expect(root.event_listener).to be_nil
     end
   end
 end
