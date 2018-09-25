@@ -2,6 +2,8 @@
 
 require "base64"
 require "json"
+require "server_sent_events"
+
 require "redfish_client/resource"
 
 module RedfishClient
@@ -60,6 +62,18 @@ module RedfishClient
     # @raise [NoResource] resource cannot be fetched
     def find!(oid)
       Resource.new(@connector, oid: oid)
+    end
+
+    # Return event listener.
+    #
+    # If the service does not support SSE, this function will return nil.
+    #
+    # @return [EventListener, nil] event listener
+    def event_listener
+      address = dig("EventService", "ServerSentEventUri")
+      return nil if address.nil?
+
+      EventListener.new(ServerSentEvents.create_client(address))
     end
 
     private
