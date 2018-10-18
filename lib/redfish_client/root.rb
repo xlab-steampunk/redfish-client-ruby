@@ -4,6 +4,7 @@ require "base64"
 require "json"
 require "server_sent_events"
 
+require "redfish_client/event_listener"
 require "redfish_client/resource"
 
 module RedfishClient
