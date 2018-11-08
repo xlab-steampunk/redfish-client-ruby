@@ -1,9 +1,8 @@
 # frozen_string_literal: true
 
-require "simplecov"
-
 require "bundler/setup"
-require "redfish_client"
+require "simplecov"
+require "webmock/rspec"
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure

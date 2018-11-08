@@ -1,110 +1,218 @@
 # frozen_string_literal: true
 
+require "json"
+
 require "redfish_client/connector"
+require "redfish_client/nil_hash"
 
 RSpec.describe RedfishClient::Connector do
   context ".new" do
     it "raises error for bad URI" do
-      expect do
-        described_class.new("bad_uri")
-      end.to raise_error(ArgumentError)
+      expect { described_class.new("bad_uri") }.to raise_error(ArgumentError)
     end
 
     it "returns a connector instance" do
-      expect(described_class.new("http://example.com")).to(
-        be_a RedfishClient::Connector
-      )
+      expect(described_class.new("http://example.com"))
+        .to be_a RedfishClient::Connector
     end
   end
-
-  before(:all) do
-    Excon.defaults[:mock] = true
-    # Stubs are pushed onto a stack - they match from bottom-up. So place
-    # least specific stub first in order to avoid staring blankly at errors.
-    Excon.stub({ host: "example.com" },                     { status: 200 })
-    Excon.stub({ host: "example.com", path: "/missing" },   { status: 404 })
-    Excon.stub({ host: "example.com", path: "/forbidden" }, { status: 403 })
-    Excon.stub({ host: "example.com", path: "/post", method: :post },
-               { status: 201 })
-    Excon.stub(
-      { host: "example.com",
-        path: "/json",
-        method: :post,
-        body: { "key" => "value" }.to_json },
-      { status: 203 }
-    )
-    Excon.stub({ host: "example.com", path: "/patch", method: :patch },
-               { status: 202 })
-    Excon.stub(
-      { host: "example.com",
-        path: "/pjson",
-        method: :patch,
-        body: { "k" => "v" }.to_json },
-      { status: 205 }
-    )
-    Excon.stub({ host: "example.com", path: "/delete", method: :delete },
-               { status: 204 })
-    Excon.stub({ host: "example.com", path: "/redirect", method: :get },
-               { status: 302, headers: { "Location" => "/" } })
-  end
-
-  after(:all) do
-    Excon.stubs.clear
-  end
-
-  subject(:connector) { described_class.new("http://example.com") }
 
   context "#get" do
     it "returns response instance" do
-      expect(connector.get("/")).to be_a Excon::Response
+      stub_request(:get, "http://example.com/")
+
+      expect(described_class.new("http://example.com").get("/"))
+        .to be_a(Excon::Response)
     end
 
-    it "keeps host stored" do
-      expect(connector.get("/missing").status).to eq(404)
-      expect(connector.get("/forbidden").status).to eq(403)
-      expect(connector.get("/").status).to eq(200)
+    it "sends GET requests" do
+      stubs = Array.new(3) { |n| stub_request(:get, "https://a.org/#{n}") }
+
+      connector = described_class.new("https://a.org")
+      3.times { |n| connector.get("/#{n}") }
+
+      stubs.each { |s| expect(s).to have_been_requested.once }
     end
 
-    it "follows redirect" do
-      expect(connector.get("/redirect").status).to eq(200)
+    it "follows redirects" do
+      stubs = [
+        stub_request(:get, "http://b.com/a")
+          .to_return(status: 301, headers: { "Location" => "/b" }),
+        stub_request(:get, "http://b.com/b")
+          .to_return(status: 302, headers: { "Location" => "/c" }),
+        stub_request(:get, "http://b.com/c")
+      ]
+
+      described_class.new("http://b.com").get("/a")
+
+      stubs.each { |s| expect(s).to have_been_requested.once }
+    end
+
+    it "does not cache responses by default" do
+      stub = stub_request(:get, "https://nocache.si/")
+
+      connector = described_class.new("https://nocache.si")
+      4.times { connector.get("/") }
+
+      expect(stub).to have_been_requested.times(4)
+    end
+
+    it "caches OK responses when instructed" do
+      stub = stub_request(:get, "https://cache.si/")
+
+      connector = described_class.new("https://cache.si", cache: {})
+      6.times { connector.get("/") }
+
+      expect(stub).to have_been_requested.once
+    end
+
+    it "does not cache non-OK responses" do
+      stub = stub_request(:get, "https://badcache.si/").to_return(status: 404)
+
+      connector = described_class.new("https://badcache.si", cache: {})
+      5.times { connector.get("/") }
+
+      expect(stub).to have_been_requested.times(5)
+    end
+
+    it "caches first OK response" do
+      stub = stub_request(:get, "http://mixcache.si/")
+        .to_return(status: 404)
+        .to_return(status: 200)
+        .to_raise("should not reach")
+
+      connector = described_class.new("http://mixcache.si", cache: {})
+
+      expect { 5.times { connector.get("/") } }.not_to raise_error
+      expect(stub).to have_been_requested.twice
     end
   end
 
   context "#post" do
     it "returns response instance" do
-      expect(connector.post("/post")).to be_a Excon::Response
+      stub_request(:post, "http://po.st/here")
+
+      expect(described_class.new("http://po.st").post("/here"))
+        .to be_a(Excon::Response)
     end
 
-    it "send post request" do
-      expect(connector.post("/post").status).to eq(201)
+    it "sends POST requests" do
+      stubs = Array.new(4) { |n| stub_request(:post, "http://po.st/#{n}") }
+
+      connector = described_class.new("http://po.st")
+      4.times { |n| connector.post("/#{n}") }
+
+      stubs.each { |s| expect(s).to have_been_requested.once }
     end
 
     it "JSON encodes data" do
-      expect(connector.post("/json", "key" => "value").status).to eq(203)
+      stub = stub_request(:post, "http://json.go/")
+        .with(body: { "key" => "value" })
+
+      described_class.new("http://json.go").post("/", "key" => "value")
+
+      expect(stub).to have_been_requested.once
+    end
+
+    it "does not cache POST requests" do
+      stub = stub_request(:post, "http://no.cache/")
+
+      connector = described_class.new("http://no.cache", cache: {})
+      3.times { connector.post("/") }
+
+      expect(stub).to have_been_requested.times(3)
     end
   end
 
   context "#patch" do
     it "returns response instance" do
-      expect(connector.patch("/patch")).to be_a Excon::Response
+      stub_request(:patch, "http://patch.it/")
+
+      expect(described_class.new("http://patch.it").patch("/"))
+        .to be_a(Excon::Response)
     end
 
-    it "send post request" do
-      expect(connector.patch("/patch", '{"key": "value"}').status).to eq(202)
+    it "sends PATCH requests" do
+      stubs = Array.new(6) { |n| stub_request(:patch, "http://pt.ch/#{n}") }
+
+      connector = described_class.new("http://pt.ch")
+      6.times { |n| connector.patch("/#{n}") }
+
+      stubs.each { |s| expect(s).to have_been_requested.once }
     end
 
     it "JSON encodes data" do
-      expect(connector.patch("/pjson", "k" => "v").status).to eq(205)
+      stub = stub_request(:patch, "http://enc.me/")
+        .with(body: { "patch" => "data" })
+
+      described_class.new("http://enc.me").patch("/", "patch" => "data")
+
+      expect(stub).to have_been_requested.once
+    end
+
+    it "does not cache PATCH requests" do
+      stub = stub_request(:patch, "http://no.cache.patch/")
+
+      connector = described_class.new("http://no.cache.patch", cache: {})
+      2.times { connector.patch("/") }
+
+      expect(stub).to have_been_requested.twice
     end
   end
 
   context "#delete" do
     it "returns response instance" do
-      expect(connector.delete("/delete")).to be_a Excon::Response
+      stub_request(:delete, "http://delete.us/now")
+
+      expect(described_class.new("http://delete.us").delete("/now"))
+        .to be_a Excon::Response
     end
 
-    it "send post request" do
-      expect(connector.delete("/delete").status).to eq(204)
+    it "sends DELETE requests" do
+      stubs = Array.new(3) { |n| stub_request(:delete, "http://d.it/#{n}") }
+
+      connector = described_class.new("http://d.it")
+      3.times { |n| connector.delete("/#{n}") }
+
+      stubs.each { |s| expect(s).to have_been_requested.once }
+    end
+
+    it "does not cache DELETE requests" do
+      stub = stub_request(:delete, "http://del.cache/now")
+
+      connector = described_class.new("http://del.cache", cache: {})
+      2.times { connector.delete("/now") }
+
+      expect(stub).to have_been_requested.times(2)
+    end
+  end
+
+  context "#reset" do
+    it "invalidates complete cache without parameters" do
+      cache = { "/1" => 1, "/2" => 2 }
+
+      connector = described_class.new("http://a.x", cache: cache)
+      connector.reset
+
+      expect(cache).to be_empty
+    end
+
+    it "invalidates selected cache entry" do
+      cache = { "/3" => 3, "/4" => 4, "/5" => 5 }
+
+      connector = described_class.new("http://dummy.do", cache: cache)
+      connector.reset("/4")
+
+      expect(cache).to eq("/3" => 3, "/5" => 5)
+    end
+
+    it "ignores missing cache entries" do
+      cache = { "/6" => 6, "/7" => 7 }
+
+      connector = described_class.new("http://any.tld", cache: cache)
+      connector.reset("/8")
+
+      expect(cache).to eq("/6" => 6, "/7" => 7)
     end
   end
 end

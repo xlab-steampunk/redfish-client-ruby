@@ -9,6 +9,9 @@ AllCops:
 Layout/MultilineOperationIndentation:
   EnforcedStyle: indented
 
+Layout/MultilineMethodCallIndentation:
+  EnforcedStyle: indented
+
 Style/MethodMissing:
   Exclude:
     - lib/redfish_client/resource.rb
