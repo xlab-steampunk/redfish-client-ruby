@@ -80,12 +80,12 @@ module RedfishClient
     private
 
     def session_login_available?
-      !@content.dig("Links", "Sessions").nil?
+      !raw.dig("Links", "Sessions").nil?
     end
 
     def session_login(username, password)
       r = @connector.post(
-        @content["Links"]["Sessions"]["@odata.id"],
+        raw["Links"]["Sessions"]["@odata.id"],
         "UserName" => username, "Password" => password
       )
       raise AuthError, "Invalid credentials" unless r.status == 201
@@ -94,7 +94,7 @@ module RedfishClient
 
       payload = r.data[:headers][TOKEN_AUTH_HEADER]
       @connector.add_headers(TOKEN_AUTH_HEADER => payload)
-      @session = Resource.new(@connector, content: JSON.parse(r.data[:body]))
+      @session = Resource.new(@connector, raw: JSON.parse(r.data[:body]))
     end
 
     def session_logout
@@ -106,7 +106,7 @@ module RedfishClient
     end
 
     def auth_test_path
-      @content.values.map { |v| v["@odata.id"] }.compact.first
+      raw.values.map { |v| v["@odata.id"] }.compact.first
     end
 
     def basic_login(username, password)

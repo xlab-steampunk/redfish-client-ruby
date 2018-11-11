@@ -89,7 +89,7 @@ RSpec.describe RedfishClient::Resource do
   context ".new" do
     it "wraps hash content" do
       b = { "sample" => "data" }
-      r = described_class.new(nil, content: b)
+      r = described_class.new(nil, raw: b)
       expect(r.raw).to eq(b)
     end
 

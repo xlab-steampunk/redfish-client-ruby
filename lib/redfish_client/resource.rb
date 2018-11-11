@@ -29,7 +29,15 @@ module RedfishClient
     class NoResource < StandardError; end
 
     # Headers, returned from the service when resource has been constructed.
+    #
+    # @return [Hash] resource headers
     attr_reader :headers
+
+    # Raw data that has been used to construct resource by either fetching it
+    # from the remote API or by being passed-in as a parameter to constructor.
+    #
+    # @return [Hash] resource raw data
+    attr_reader :raw
 
     # Create new resource.
     #
@@ -41,15 +49,14 @@ module RedfishClient
     # @param connector [RedfishClient::Connector] connector that will be used
     #   to fetch the resources
     # @param oid [String] OpenData id of the resource
-    # @param content [Hash] content to populate resource with
+    # @param raw [Hash] raw content to populate resource with
     # @raise [NoResource] resource cannot be retrieved from the service
-    def initialize(connector, oid: nil, content: nil)
+    def initialize(connector, oid: nil, raw: nil)
       @connector = connector
-
       if oid
         initialize_from_service(oid)
       else
-        @content = content
+        @raw = raw
       end
     end
 
@@ -61,7 +68,7 @@ module RedfishClient
     # @param attr [String] key for accessing data
     # @return associated value or `nil` if attr is missing
     def [](attr)
-      build_resource(@content[attr])
+      build_resource(raw[attr])
     end
 
     # Safely access nested resource content.
@@ -82,7 +89,7 @@ module RedfishClient
     # @param name [String, Symbol] key name to test
     # @return [Boolean] inclusion test result
     def key?(name)
-      @content.key?(name.to_s)
+      raw.key?(name.to_s)
     end
 
     # Convenience access for resource data.
@@ -103,18 +110,11 @@ module RedfishClient
       @connector.reset if @connector.respond_to?(:reset)
     end
 
-    # Access raw JSON data that resource wraps.
-    #
-    # @return [Hash] wrapped data
-    def raw
-      @content
-    end
-
     # Pretty-print the wrapped content.
     #
     # @return [String] JSON-serialized raw data
     def to_s
-      JSON.pretty_generate(@content)
+      JSON.pretty_generate(raw)
     end
 
     # Issue a POST requests to the selected endpoint.
@@ -173,14 +173,14 @@ module RedfishClient
       resp = @connector.get(oid)
       raise NoResource unless resp.status == 200
 
-      @content = JSON.parse(resp.data[:body])
-      @content["@odata.id"] = oid
+      @raw = JSON.parse(resp.data[:body])
+      @raw["@odata.id"] = oid
       @headers = resp.data[:headers]
     end
 
     def get_path(field, path)
       raise NoODataId if path.nil? && !key?(field)
-      path || @content[field]
+      path || raw[field]
     end
 
     def build_resource(data)
@@ -197,7 +197,7 @@ module RedfishClient
       if data.key?("@odata.id")
         Resource.new(@connector, oid: data["@odata.id"])
       else
-        Resource.new(@connector, content: data)
+        Resource.new(@connector, raw: data)
       end
     rescue NoResource
       nil
