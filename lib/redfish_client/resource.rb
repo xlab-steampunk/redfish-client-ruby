@@ -103,13 +103,6 @@ module RedfishClient
       key?(symbol.to_s) || super
     end
 
-    # Clear the cached sub-resources.
-    #
-    # This method is a no-op if connector in use does not support caching.
-    def reset
-      @connector.reset if @connector.respond_to?(:reset)
-    end
-
     # Pretty-print the wrapped content.
     #
     # @return [String] JSON-serialized raw data

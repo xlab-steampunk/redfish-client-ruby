@@ -211,18 +211,6 @@ RSpec.describe RedfishClient::Resource do
     end
   end
 
-  context "#reset" do
-    it "ignores non-caching connectors" do
-      expect { subject.reset }.not_to raise_error
-    end
-
-    it "clears cache of caching connectors" do
-      connector = RedfishClient::Connector.new("http://example.com", cache: {})
-      client = described_class.new(connector, oid: "/")
-      expect { client.reset }.not_to raise_error
-    end
-  end
-
   context "#post" do
     it "returns response instance" do
       expect(resource.post).to be_a Excon::Response
