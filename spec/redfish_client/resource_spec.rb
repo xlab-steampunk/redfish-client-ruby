@@ -176,7 +176,7 @@ RSpec.describe RedfishClient::Resource do
     end
 
     it "loads subresources on demand" do
-      expect(resource.data).to be_a described_class
+      expect(resource.data).to be_a(described_class)
     end
 
     it "returns nil on missing key" do
@@ -213,7 +213,7 @@ RSpec.describe RedfishClient::Resource do
 
   context "#post" do
     it "returns response instance" do
-      expect(resource.post).to be_a Excon::Response
+      expect(resource.post).to be_a(RedfishClient::Connector::Response)
     end
 
     it "posts data to the @odata.id endpoint by default" do
@@ -241,7 +241,7 @@ RSpec.describe RedfishClient::Resource do
 
   context "#patch" do
     it "returns response instance" do
-      expect(resource.patch).to be_a Excon::Response
+      expect(resource.patch).to be_a(RedfishClient::Connector::Response)
     end
 
     it "posts data to the @odata.id endpoint by default" do
@@ -269,7 +269,7 @@ RSpec.describe RedfishClient::Resource do
 
   context "#delete" do
     it "returns response instance" do
-      expect(resource.delete).to be_a Excon::Response
+      expect(resource.delete).to be_a RedfishClient::Connector::Response
     end
 
     it "posts data to the external endpoint" do

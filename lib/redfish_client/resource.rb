@@ -128,7 +128,7 @@ module RedfishClient
     # @param field [String, Symbol] path lookup field
     # @param path [String] path to post to
     # @param payload [Hash<String, >] data to send
-    # @return [Excon::Response] response
+    # @return [Connector::Response] response
     # @raise  [NoODataId] resource has no OpenData id
     def post(field: "@odata.id", path: nil, payload: nil)
       @connector.post(get_path(field, path), payload)
@@ -142,7 +142,7 @@ module RedfishClient
     # @param field [String, Symbol] path lookup field
     # @param path [String] path to patch
     # @param payload [Hash<String, >] data to send
-    # @return [Excon::Response] response
+    # @return [Connector::Response] response
     # @raise  [NoODataId] resource has no OpenData id
     def patch(field: "@odata.id", path: nil, payload: nil)
       @connector.patch(get_path(field, path), payload)
@@ -154,7 +154,7 @@ module RedfishClient
     # raised, since deleting non-networked resources makes no sense and
     # probably indicates bug in library consumer.
     #
-    # @return [Excon::Response] response
+    # @return [Connector::Response] response
     # @raise  [NoODataId] resource has no OpenData id
     def delete
       @connector.delete(get_path("@odata.id", nil))
@@ -166,9 +166,9 @@ module RedfishClient
       resp = @connector.get(oid)
       raise NoResource unless resp.status == 200
 
-      @raw = JSON.parse(resp.data[:body])
+      @raw = JSON.parse(resp.body)
       @raw["@odata.id"] = oid
-      @headers = resp.data[:headers]
+      @headers = resp.headers
     end
 
     def get_path(field, path)

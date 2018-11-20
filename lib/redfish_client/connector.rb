@@ -14,6 +14,12 @@ module RedfishClient
   # Library users should treat this class as an implementation detail and
   # use higer-level {RedfishClient::Resource} instead.
   class Connector
+    # Response struct.
+    #
+    # This struct is returned from the methods that interact with the remote
+    # API.
+    Response = Struct.new(:status, :headers, :body)
+
     # Default headers, as required by Redfish spec
     # https://redfish.dmtf.org/schemas/DSP0266_1.4.0.html#request-headers
     DEFAULT_HEADERS = {
@@ -73,11 +79,11 @@ module RedfishClient
     # remote and then cached, but only if the response has an OK (200) status.
     #
     # @param path [String] path to the resource, relative to the base url
-    # @return [Excon::Response] response object
+    # @return [Response] response object
     def get(path)
       return @cache[path] if @cache[path]
 
-      @connection.get(path: path, headers: @headers).tap do |r|
+      do_request(prepare_request_params(:get, path)).tap do |r|
         @cache[path] = r if r.status == 200
       end
     end
@@ -86,26 +92,26 @@ module RedfishClient
     #
     # @param path [String] path to the resource, relative to the base
     # @param data [Hash] data to be sent over the socket, JSON encoded
-    # @return [Excon::Response] response object
+    # @return [Response] response object
     def post(path, data = nil)
-      @connection.post(prepare_request_params(path, data))
+      do_request(prepare_request_params(:post, path, data))
     end
 
     # Issue PATCH requests to the service.
     #
     # @param path [String] path to the resource, relative to the base
     # @param data [Hash] data to be sent over the socket
-    # @return [Excon::Response] response object
+    # @return [Response] response object
     def patch(path, data = nil)
-      @connection.patch(prepare_request_params(path, data))
+      do_request(prepare_request_params(:patch, path, data))
     end
 
     # Issue DELETE requests to the service.
     #
     # @param path [String] path to the resource, relative to the base
-    # @return [Excon::Response] response object
+    # @return [Response] response object
     def delete(path)
-      @connection.delete(path: path, headers: @headers)
+      do_request(prepare_request_params(:delete, path))
     end
 
     # Clear the cached responses.
@@ -122,8 +128,13 @@ module RedfishClient
 
     private
 
-    def prepare_request_params(path, data)
-      params = { path: path }
+    def do_request(params)
+      r = @connection.request(params)
+      Response.new(r.status, r.data[:headers], r.data[:body])
+    end
+
+    def prepare_request_params(method, path, data = nil)
+      params = { method: method, path: path }
       if data
         params[:body] = data.to_json
         params[:headers] = @headers.merge("Content-Type" => "application/json")

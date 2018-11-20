@@ -92,9 +92,9 @@ module RedfishClient
 
       session_logout
 
-      payload = r.data[:headers][TOKEN_AUTH_HEADER]
+      payload = r.headers[TOKEN_AUTH_HEADER]
       @connector.add_headers(TOKEN_AUTH_HEADER => payload)
-      @session = Resource.new(@connector, raw: JSON.parse(r.data[:body]))
+      @session = Resource.new(@connector, raw: JSON.parse(r.body))
     end
 
     def session_logout

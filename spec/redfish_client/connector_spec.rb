@@ -13,7 +13,7 @@ RSpec.describe RedfishClient::Connector do
 
     it "returns a connector instance" do
       expect(described_class.new("http://example.com"))
-        .to be_a RedfishClient::Connector
+        .to be_a(described_class)
     end
   end
 
@@ -22,7 +22,7 @@ RSpec.describe RedfishClient::Connector do
       stub_request(:get, "http://example.com/")
 
       expect(described_class.new("http://example.com").get("/"))
-        .to be_a(Excon::Response)
+        .to be_a(described_class::Response)
     end
 
     it "sends GET requests" do
@@ -93,7 +93,7 @@ RSpec.describe RedfishClient::Connector do
       stub_request(:post, "http://po.st/here")
 
       expect(described_class.new("http://po.st").post("/here"))
-        .to be_a(Excon::Response)
+        .to be_a(described_class::Response)
     end
 
     it "sends POST requests" do
@@ -129,7 +129,7 @@ RSpec.describe RedfishClient::Connector do
       stub_request(:patch, "http://patch.it/")
 
       expect(described_class.new("http://patch.it").patch("/"))
-        .to be_a(Excon::Response)
+        .to be_a(described_class::Response)
     end
 
     it "sends PATCH requests" do
@@ -165,7 +165,7 @@ RSpec.describe RedfishClient::Connector do
       stub_request(:delete, "http://delete.us/now")
 
       expect(described_class.new("http://delete.us").delete("/now"))
-        .to be_a Excon::Response
+        .to be_a(described_class::Response)
     end
 
     it "sends DELETE requests" do
