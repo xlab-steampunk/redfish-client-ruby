@@ -13,33 +13,36 @@ RSpec.describe RedfishClient::EventListener do
     end
   end
 
-  def new_event(records)
-    event = ServerSentEvents::Event.new
-    event.set("data", (records ? { "Events" => records } : {}).to_json)
-    event
-  end
-
   context "#listen" do
-    let(:sse_client) { instance_double("ServerSentEvents::Client") }
-    let(:listener) { described_class.new(sse_client) }
-
     it "splits event into records" do
-      records = [{ "a" => 3 }, { "b" => "c" }]
-      allow(sse_client).to receive(:listen).and_yield(new_event(records))
+      event = ServerSentEvents::Event.new.tap do |e|
+        e.set("data", '{"Events": [{"a": 3}, {"b": "c"}]}')
+      end
+      sse_client = instance_double("ServerSentEvents::Client")
+      allow(sse_client).to receive(:listen).and_yield(event)
 
-      expect { |b| listener.listen(&b) }.to yield_successive_args(*records)
+      expect { |b| described_class.new(sse_client).listen(&b) }
+        .to yield_successive_args({ "a" => 3 }, { "b" => "c" })
     end
 
     it "splits empty array of records" do
-      allow(sse_client).to receive(:listen).and_yield(new_event([]))
+      event = ServerSentEvents::Event.new.tap do |e|
+        e.set("data", '{"Events": []}')
+      end
+      sse_client = instance_double("ServerSentEvents::Client")
+      allow(sse_client).to receive(:listen).and_yield(event)
 
-      expect { |b| listener.listen(&b) }.not_to yield_control
+      expect { |b| described_class.new(sse_client).listen(&b) }
+        .not_to yield_control
     end
 
     it "handles missing event records" do
-      allow(sse_client).to receive(:listen).and_yield(new_event(nil))
+      event = ServerSentEvents::Event.new.tap { |e| e.set("data", "{}") }
+      sse_client = instance_double("ServerSentEvents::Client")
+      allow(sse_client).to receive(:listen).and_yield(event)
 
-      expect { |b| listener.listen(&b) }.not_to yield_control
+      expect { |b| described_class.new(sse_client).listen(&b) }
+        .not_to yield_control
     end
   end
 end

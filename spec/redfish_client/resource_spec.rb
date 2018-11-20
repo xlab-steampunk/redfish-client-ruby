@@ -1,91 +1,9 @@
 # frozen_string_literal: true
 
-require "json"
-
 require "redfish_client/connector"
 require "redfish_client/resource"
 
 RSpec.describe RedfishClient::Resource do
-  before(:all) do
-    r_headers = { "Accept" => "application/json", "OData-Version" => "4.0" }
-    w_headers = r_headers.merge("Content-Type" => "application/json")
-    host = "example.com"
-
-    Excon.defaults[:mock] = true
-    # Stubs are pushed onto a stack - they match from bottom-up. So place
-    # least specific stub first in order to avoid staring blankly at errors.
-    Excon.stub(
-      { path: "/", headers: r_headers, host: host },
-      { status: 200,
-        body: {
-          "@odata.id" => "/",
-          "key" => "value",
-          "Members" => [{ "@odata.id" => "/sub" }, { "@odata.id" => "/sub1" }],
-          "data" => { "a" => "b" },
-          "alt_path" => "/alt"
-        }.to_json }
-    )
-    Excon.stub(
-      { path: "/", method: :post, headers: w_headers, host: host },
-      { status: 201 }
-    )
-    Excon.stub(
-      { path: "/", method: :post, headers: r_headers, host: host },
-      { status: 203 }
-    )
-    Excon.stub(
-      { path: "/", method: :patch, headers: r_headers, host: host },
-      { status: 401 }
-    )
-    Excon.stub(
-      { path: "/", method: :delete, headers: r_headers, host: host },
-      { status: 204 }
-    )
-    Excon.stub(
-      { path: "/missing", headers: r_headers, host: host },
-      { status: 404 }
-    )
-    Excon.stub(
-      { path: "/missing", headers: w_headers, host: host },
-      { status: 403 }
-    )
-    Excon.stub(
-      { path: "/alt", method: :post, headers: r_headers, host: host },
-      { status: 202 }
-    )
-    Excon.stub(
-      { path: "/alt", method: :patch, headers: r_headers, host: host },
-      { status: 400 }
-    )
-    Excon.stub(
-      { path: "/sub", headers: r_headers, host: host },
-      { status: 200, body: { "@odata.id" => "/sub", "x" => "y" }.to_json }
-    )
-    Excon.stub(
-      { path: "/sub1", headers: r_headers, host: host },
-      { status: 200, body: { "w" => "z" }.to_json }
-    )
-    Excon.stub(
-      { path: "/json", method: :post, headers: w_headers, host: host,
-        body: { "key" => "value" }.to_json },
-      { status: 203 }
-    )
-    Excon.stub(
-      { path: "/pjson", method: :patch, headers: w_headers, host: host,
-        body: { "k" => "v" }.to_json },
-      { status: 205 }
-    )
-  end
-
-  after(:all) do
-    Excon.stubs.clear
-  end
-
-  subject(:resource) do
-    connector = RedfishClient::Connector.new("http://example.com")
-    described_class.new(connector, oid: "/")
-  end
-
   context ".new" do
     it "wraps hash content" do
       b = { "sample" => "data" }
@@ -94,192 +12,257 @@ RSpec.describe RedfishClient::Resource do
     end
 
     it "fetches resource from oid" do
-      connector = RedfishClient::Connector.new("http://example.com")
-      r = described_class.new(connector, oid: "/sub")
-      expect(r.raw).to eq("@odata.id" => "/sub", "x" => "y")
+      response = RedfishClient::Connector::Response.new(
+        200, {}, '{"@odata.id": "/", "a": "b"}'
+      )
+      connector = double("connector")
+
+      expect(connector).to receive(:get).with("/").and_return(response)
+      expect(described_class.new(connector, oid: "/").raw)
+        .to eq("@odata.id" => "/", "a" => "b")
     end
 
     it "add resource oid if missing" do
-      connector = RedfishClient::Connector.new("http://example.com")
-      r = described_class.new(connector, oid: "/sub1")
-      expect(r.raw).to eq("@odata.id" => "/sub1", "w" => "z")
+      response = RedfishClient::Connector::Response.new(200, {}, '{"a": "b"}')
+      connector = double("connector")
+
+      expect(connector).to receive(:get).with("/").and_return(response)
+      expect(described_class.new(connector, oid: "/").raw)
+        .to eq("@odata.id" => "/", "a" => "b")
     end
 
     it "errors out on service error" do
-      connector = RedfishClient::Connector.new("http://example.com")
-      expect { described_class.new(connector, oid: "/missing") }
-        .to raise_error(RedfishClient::Resource::NoResource)
+      response = RedfishClient::Connector::Response.new(400, nil, nil)
+      connector = double("connector")
+
+      expect(connector).to receive(:get).with("/").and_return(response)
+      expect { described_class.new(connector, oid: "/") }
+        .to raise_error(described_class::NoResource)
     end
   end
 
   context "#[]" do
     it "retrieves key from resource" do
-      expect(resource["key"]).to eq("value")
+      expect(described_class.new(nil, raw: { "k" => "v" })["k"]).to eq("v")
     end
 
     it "loads subresources on demand" do
-      expect(resource["data"]).to be_a described_class
+      response = RedfishClient::Connector::Response.new(200, {}, '{"k": "v"}')
+      connector = double("connector")
+
+      expect(connector).to receive(:get).with("/s").and_return(response)
+      resource = described_class.new(
+        connector, raw: { "s" => { "@odata.id" => "/s" } }
+      )
+      expect(resource["s"].raw).to eq("@odata.id" => "/s", "k" => "v")
     end
 
     it "returns nil on missing key" do
-      expect(resource["missing"]).to be_nil
+      expect(described_class.new(nil, raw: {})["missing"]).to be_nil
+    end
+
+    it "returns nil on missing reference" do
+      connector = double("connector")
+      expect(connector).to receive(:get).with("/missing").and_return(
+        RedfishClient::Connector::Response.new(404, {}, "{}"),
+      )
+      raw = { "missing" => { "@odata.id" => "/missing" } }
+      expect(described_class.new(connector, raw: raw)["missing"]).to be_nil
     end
   end
 
   context "#dig" do
     it "retrieves key from resource" do
+      resource = described_class.new(nil, raw: { "key" => "value" })
       expect(resource.dig("key")).to eq("value")
     end
 
     it "loads subresources on demand" do
-      expect(resource.dig("data")).to be_a described_class
+      response = RedfishClient::Connector::Response.new(200, {}, '{"k": "v"}')
+      connector = double("connector")
+
+      expect(connector).to receive(:get).with("/s").and_return(response)
+      resource = described_class.new(
+        connector, raw: { "s" => { "@odata.id" => "/s" } }
+      )
+      expect(resource.dig("s").raw).to eq("@odata.id" => "/s", "k" => "v")
     end
 
     it "returns nil on missing key" do
-      expect(resource.dig("missing")).to be_nil
+      expect(described_class.new(nil, raw: {}).dig("missing")).to be_nil
     end
 
     it "loads nested keys" do
-      expect(resource.dig("data", "a")).to eq("b")
+      resource = described_class.new(nil, raw: { "a" => { "b" => "c" } })
+      expect(resource.dig("a", "b")).to eq("c")
     end
 
     it "loads nested keys and indices" do
-      expect(resource.dig("Members", 0, "x")).to eq("y")
+      resource = described_class.new(nil, raw: { "a" => [{ "b" => "c" }] })
+      expect(resource.dig("a", 0, "b")).to eq("c")
     end
 
     it "skips any keys after first nil value" do
-      expect(resource.dig("Members", 4, "a", "b", 3)).to be_nil
+      expect(described_class.new(nil, raw: {}).dig("x", 4, "a")).to be_nil
     end
   end
 
   context "#key?" do
     it "returns true for existing symbol" do
-      expect(resource.key?(:data)).to be true
+      expect(described_class.new(nil, raw: { "d" => 1 }).key?(:d)).to be true
     end
 
     it "returns true for existing string" do
-      expect(resource.key?("data")).to be true
+      expect(described_class.new(nil, raw: { "d" => 1 }).key?("d")).to be true
     end
 
     it "returns false for missing symbol" do
-      expect(resource.key?(:missing)).to be false
+      expect(described_class.new(nil, raw: {}).key?(:missing)).to be false
     end
 
     it "returns false for missing string" do
-      expect(resource.key?("missing")).to be false
+      expect(described_class.new(nil, raw: {}).key?("missing")).to be false
     end
   end
 
   context "#method_missing" do
     it "retrieves key from resource" do
-      expect(resource.key).to eq("value")
+      expect(described_class.new(nil, raw: { "k" => "v" }).k).to eq("v")
     end
 
     it "loads subresources on demand" do
-      expect(resource.data).to be_a(described_class)
+      response = RedfishClient::Connector::Response.new(200, {}, '{"k": "v"}')
+      connector = double("connector")
+
+      expect(connector).to receive(:get).with("/s").and_return(response)
+      resource = described_class.new(
+        connector, raw: { "s" => { "@odata.id" => "/s" } }
+      )
+      expect(resource.s.raw).to eq("@odata.id" => "/s", "k" => "v")
     end
 
     it "returns nil on missing key" do
-      expect(resource.missing).to be_nil
+      expect(described_class.new(nil, raw: {}).missing).to be_nil
     end
   end
 
   context "#respond_to?" do
     it "returns true when accessing existing key" do
-      expect(resource.respond_to?("data")).to eq(true)
+      expect(described_class.new(nil, raw: { "a" => 1 }).respond_to?("a"))
+        .to eq(true)
     end
 
     it "returns false when accessing non-existing key" do
-      expect(resource.respond_to?("bad")).to eq(false)
+      expect(described_class.new(nil, raw: {}).respond_to?("a")).to eq(false)
     end
   end
 
   context "#raw" do
     it "returns raw wrapped data" do
-      expect(resource.Members[0].raw).to eq("@odata.id" => "/sub", "x" => "y")
+      expect(described_class.new(nil, raw: { "a" => 3 }).raw).to eq("a" => 3)
     end
 
     it "returns raw wrapped data with added oid" do
-      expect(resource.Members[1].raw).to eq("@odata.id" => "/sub1", "w" => "z")
+      response = RedfishClient::Connector::Response.new(200, {}, '{"a": "b"}')
+      connector = double("connector")
+
+      expect(connector).to receive(:get).with("/").and_return(response)
+      expect(described_class.new(connector, oid: "/").raw)
+        .to eq("@odata.id" => "/", "a" => "b")
     end
   end
 
   context "#to_s" do
     it "dumps content to json" do
-      expect(JSON.parse(resource.Members[0].to_s))
-        .to eq(resource.Members[0].raw)
+      expect(described_class.new(nil, raw: { "k" => 5 }).to_s)
+        .to eq("{\n  \"k\": 5\n}")
     end
   end
 
   context "#post" do
-    it "returns response instance" do
-      expect(resource.post).to be_a(RedfishClient::Connector::Response)
+    it "sends POST request to the @odata.id endpoint by default" do
+      connector = double("connector")
+      expect(connector).to receive(:post).with("/a", nil)
+      described_class.new(connector, raw: { "@odata.id" => "/a" }).post
     end
 
-    it "posts data to the @odata.id endpoint by default" do
-      expect(resource.post.status).to eq(203)
+    it "sends POST request to the endpoint from selected field" do
+      connector = double("connector")
+      expect(connector).to receive(:post).with("/b", nil)
+      described_class.new(connector, raw: { "b" => "/b" }).post(field: "b")
     end
 
-    it "posts data to the selected field content" do
-      expect(resource.post(field: "alt_path").status).to eq(202)
+    it "sends POST request to the path in presence of field" do
+      connector = double("connector")
+      expect(connector).to receive(:post).with("/c", nil)
+      described_class.new(connector, raw: { "b" => "/b" })
+        .post(field: "b", path: "/c")
     end
 
-    it "posts data to the path in presence of field" do
-      expect(resource.post(field: "alt_path", path: "/missing").status)
-        .to eq(404)
+    it "sends POST request to the selected path" do
+      connector = double("connector")
+      expect(connector).to receive(:post).with("/c", nil)
+      described_class.new(connector, raw: {}).post(path: "/c")
     end
 
-    it "posts data to the selected path" do
-      expect(resource.post(path: "/missing").status).to eq(404)
-    end
-
-    it "JSON encodes data" do
-      params = { path: "/json", payload: { "key" => "value" } }
-      expect(resource.post(params).status).to eq(203)
+    it "passes payload to the connector" do
+      connector = double("connector")
+      expect(connector).to receive(:post).with("/c", 3 => 4)
+      described_class.new(connector, raw: {})
+        .post(path: "/c", payload: { 3 => 4 })
     end
   end
 
   context "#patch" do
-    it "returns response instance" do
-      expect(resource.patch).to be_a(RedfishClient::Connector::Response)
+    it "sends PATCH request to the @odata.id endpoint by default" do
+      connector = double("connector")
+      expect(connector).to receive(:patch).with("/e", nil)
+      described_class.new(connector, raw: { "@odata.id" => "/e" }).patch
     end
 
-    it "posts data to the @odata.id endpoint by default" do
-      expect(resource.patch.status).to eq(401)
+    it "sends PATCH request to the endpoint from selected field" do
+      connector = double("connector")
+      expect(connector).to receive(:patch).with("/f", nil)
+      described_class.new(connector, raw: { "f" => "/f" }).patch(field: "f")
     end
 
-    it "posts data to the selected field content" do
-      expect(resource.patch(field: "alt_path").status).to eq(400)
+    it "sends PATCH request to the path in presence of field" do
+      connector = double("connector")
+      expect(connector).to receive(:patch).with("/h", nil)
+      described_class.new(connector, raw: { "g" => "/g" })
+        .patch(field: "g", path: "/h")
     end
 
-    it "posts data to the path in presence of field" do
-      expect(resource.patch(field: "alt_path", path: "/missing").status)
-        .to eq(404)
+    it "sends PATCH request to the selected path" do
+      connector = double("connector")
+      expect(connector).to receive(:patch).with("/i", nil)
+      described_class.new(connector, raw: {}).patch(path: "/i")
     end
 
-    it "posts data to the selected path" do
-      expect(resource.patch(path: "/missing").status).to eq(404)
-    end
-
-    it "JSON encodes data" do
-      params = { path: "/pjson", payload: { "k" => "v" } }
-      expect(resource.patch(params).status).to eq(205)
+    it "passes payload to the connector" do
+      connector = double("connector")
+      expect(connector).to receive(:patch).with("/j", "k" => "v")
+      described_class.new(connector, raw: {})
+        .patch(path: "/j", payload: { "k" => "v" })
     end
   end
 
   context "#delete" do
-    it "returns response instance" do
-      expect(resource.delete).to be_a RedfishClient::Connector::Response
-    end
-
-    it "posts data to the external endpoint" do
-      expect(resource.delete.status).to eq(204)
+    it "sends DELETE request to the @odata.id endpoint" do
+      connector = double("connector")
+      expect(connector).to receive(:delete).with("/d")
+      described_class.new(connector, raw: { "@odata.id" => "/d" }).delete
     end
   end
 
   context "#headers" do
     it "returns response headers, set at init time" do
-      expect(resource.headers).to eq({})
+      connector = double("connector")
+      expect(connector).to receive(:get).with("/a").and_return(
+        RedfishClient::Connector::Response.new(200, { "a" => "b" }, "{}"),
+      )
+      resource = described_class.new(connector, oid: "/a")
+      expect(resource.headers).to eq("a" => "b")
     end
   end
 end

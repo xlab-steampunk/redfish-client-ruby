@@ -24,7 +24,7 @@ module RedfishClient
     # https://redfish.dmtf.org/schemas/DSP0266_1.4.0.html#request-headers
     DEFAULT_HEADERS = {
       "Accept" => "application/json",
-      "OData-Version" => "4.0"
+      "OData-Version" => "4.0",
     }.freeze
 
     # Create new connector.

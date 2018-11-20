@@ -1,143 +1,64 @@
 # frozen_string_literal: true
 
-require "excon"
-
+require "redfish_client/connector"
 require "redfish_client/event_listener"
+require "redfish_client/resource"
 require "redfish_client/root"
 
 RSpec.describe RedfishClient::Root do
-  before(:all) do
-    Excon.defaults[:mock] = true
-    Excon.stub(
-      { path: "/" },
-      { status: 200,
-        body: {
-          "EventService" => { "ServerSentEventUri" => "http://127.0.0.1" },
-          "Links" => { "Sessions" => { "@odata.id" => "/sess" } },
-          "Auth" => { "@odata.id" => "/auth" }
-        }.to_json }
-    )
-    Excon.stub(
-      { path: "/sess",
-        method: :get,
-        headers: { "Authorization" => "Basic dXNlcjpwYXNz" } },
-      { status: 200,
-        body: { "@odata.id": "/sess" }.to_json }
-    )
-    Excon.stub(
-      { path: "/sess",
-        method: :post,
-        body: { "UserName" => "user", "Password" => "pass" }.to_json },
-      { status: 201,
-        body: { "@odata.id": "/sess/1" }.to_json,
-        headers: { "X-Auth-Token" => "token" } }
-    )
-    Excon.stub(
-      { path: "/sess/1", method: :delete },
-      { status: 204 }
-    )
-    Excon.stub(
-      { path: "/auth", headers: { "X-Auth-Token" => "token" } },
-      { status: 200, body: { "key" => "val" }.to_json }
-    )
-    Excon.stub(
-      { path: "/basic_root" },
-      { status: 200, body: { "res" => { "@odata.id" => "/basic" } }.to_json }
-    )
-    Excon.stub(
-      { path: "/basic" },
-      { status: 401, body: { "error" => "no auth" }.to_json }
-    )
-    Excon.stub(
-      { path: "/basic", headers: { "Authorization" => "Basic dXNlcjpwYXNz" } },
-      { status: 200, body: { "key" => "basic_val" }.to_json }
-    )
-    Excon.stub(
-      { path: "/find" },
-      { status: 200, body: { "find" => "resource" }.to_json }
-    )
-  end
-
-  after(:all) do
-    Excon.stubs.clear
-  end
-
-  subject(:root) do
-    connector = RedfishClient::Connector.new("http://example.com")
-    described_class.new(connector, oid: "/")
-  end
-
-  context "with sessions" do
-    before { root.login("user", "pass") }
-
-    context "#login" do
-      it "authenticates user against service" do
-        expect(root.Auth.key).to eq("val")
-      end
-    end
-
-    context "#logout" do
-      it "terminates user session" do
-        root.logout
-        expect { root.Auth }.to raise_error(Excon::Error::StubNotFound)
-      end
-    end
-  end
-
-  context "without sessions" do
-    subject(:root) do
-      connector = RedfishClient::Connector.new("http://example.com")
-      described_class.new(connector, oid: "/basic_root")
-    end
-    before { root.login("user", "pass") }
-
-    context "#login" do
-      it "authenticates user against service" do
-        expect(root.res.key).to eq("basic_val")
-      end
-    end
-
-    context "#logout" do
-      it "terminates user session" do
-        root.logout
-        expect(root.res).to be_nil
-      end
-    end
-  end
-
   context "#find" do
     it "fetches resource by OData id" do
-      res = root.find("/find")
-      expect(res.raw).to eq("find" => "resource", "@odata.id" => "/find")
+      connector = double("connector")
+      expect(connector).to receive(:get).with("/find").and_return(
+        RedfishClient::Connector::Response.new(200, nil, '{"f": 8}'),
+      )
+      expect(described_class.new(connector, raw: {}).find("/find"))
+        .not_to be_nil
     end
 
     it "returns nil on error" do
-      expect(root.find("/basic")).to be_nil
+      connector = double("connector")
+      expect(connector).to receive(:get).with("/bad").and_return(
+        RedfishClient::Connector::Response.new(404, nil, '{"f": 8}'),
+      )
+      expect(described_class.new(connector, raw: {}).find("/bad"))
+        .to be_nil
     end
   end
 
   context "#find!" do
     it "fetches resource by OData id" do
-      res = root.find!("/find")
-      expect(res.raw).to eq("find" => "resource", "@odata.id" => "/find")
+      connector = double("connector")
+      expect(connector).to receive(:get).with("/find").and_return(
+        RedfishClient::Connector::Response.new(200, nil, '{"f": 8}'),
+      )
+      expect { described_class.new(connector, raw: {}).find!("/find") }
+        .not_to raise_error
     end
 
     it "raises exception on error" do
-      expect { root.find!("/basic") }
+      connector = double("connector")
+      expect(connector).to receive(:get).with("/bad").and_return(
+        RedfishClient::Connector::Response.new(500, nil, '{"f": 8}'),
+      )
+      expect { described_class.new(connector, raw: {}).find!("/bad") }
         .to raise_error(RedfishClient::Resource::NoResource)
     end
   end
 
   context "#event_listener" do
     it "returns event listener" do
-      expect(root.event_listener)
+      raw = {
+        "EventService" => {
+          "ServerSentEventUri" => "https://a.b:12345/dummy",
+        },
+      }
+      expect(described_class.new(nil, raw: raw).event_listener)
         .to be_an_instance_of(RedfishClient::EventListener)
     end
 
     it "returns nil if SSE is not supported" do
-      connector = RedfishClient::Connector.new("http://example.com")
-      root = described_class.new(connector, oid: "/basic_root")
-      expect(root.event_listener).to be_nil
+      expect(described_class.new(nil, raw: {}).event_listener).to be_nil
     end
   end
 end

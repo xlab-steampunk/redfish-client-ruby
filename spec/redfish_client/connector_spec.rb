@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "excon"
 require "json"
 
 require "redfish_client/connector"
@@ -20,17 +21,14 @@ RSpec.describe RedfishClient::Connector do
   context "#get" do
     it "returns response instance" do
       stub_request(:get, "http://example.com/")
-
       expect(described_class.new("http://example.com").get("/"))
         .to be_a(described_class::Response)
     end
 
     it "sends GET requests" do
       stubs = Array.new(3) { |n| stub_request(:get, "https://a.org/#{n}") }
-
       connector = described_class.new("https://a.org")
       3.times { |n| connector.get("/#{n}") }
-
       stubs.each { |s| expect(s).to have_been_requested.once }
     end
 
@@ -40,38 +38,30 @@ RSpec.describe RedfishClient::Connector do
           .to_return(status: 301, headers: { "Location" => "/b" }),
         stub_request(:get, "http://b.com/b")
           .to_return(status: 302, headers: { "Location" => "/c" }),
-        stub_request(:get, "http://b.com/c")
+        stub_request(:get, "http://b.com/c"),
       ]
-
       described_class.new("http://b.com").get("/a")
-
       stubs.each { |s| expect(s).to have_been_requested.once }
     end
 
     it "does not cache responses by default" do
       stub = stub_request(:get, "https://nocache.si/")
-
       connector = described_class.new("https://nocache.si")
       4.times { connector.get("/") }
-
       expect(stub).to have_been_requested.times(4)
     end
 
     it "caches OK responses when instructed" do
       stub = stub_request(:get, "https://cache.si/")
-
       connector = described_class.new("https://cache.si", cache: {})
       6.times { connector.get("/") }
-
       expect(stub).to have_been_requested.once
     end
 
     it "does not cache non-OK responses" do
       stub = stub_request(:get, "https://badcache.si/").to_return(status: 404)
-
       connector = described_class.new("https://badcache.si", cache: {})
       5.times { connector.get("/") }
-
       expect(stub).to have_been_requested.times(5)
     end
 
@@ -80,9 +70,7 @@ RSpec.describe RedfishClient::Connector do
         .to_return(status: 404)
         .to_return(status: 200)
         .to_raise("should not reach")
-
       connector = described_class.new("http://mixcache.si", cache: {})
-
       expect { 5.times { connector.get("/") } }.not_to raise_error
       expect(stub).to have_been_requested.twice
     end
@@ -91,35 +79,28 @@ RSpec.describe RedfishClient::Connector do
   context "#post" do
     it "returns response instance" do
       stub_request(:post, "http://po.st/here")
-
       expect(described_class.new("http://po.st").post("/here"))
         .to be_a(described_class::Response)
     end
 
     it "sends POST requests" do
       stubs = Array.new(4) { |n| stub_request(:post, "http://po.st/#{n}") }
-
       connector = described_class.new("http://po.st")
       4.times { |n| connector.post("/#{n}") }
-
       stubs.each { |s| expect(s).to have_been_requested.once }
     end
 
     it "JSON encodes data" do
       stub = stub_request(:post, "http://json.go/")
         .with(body: { "key" => "value" })
-
       described_class.new("http://json.go").post("/", "key" => "value")
-
       expect(stub).to have_been_requested.once
     end
 
     it "does not cache POST requests" do
       stub = stub_request(:post, "http://no.cache/")
-
       connector = described_class.new("http://no.cache", cache: {})
       3.times { connector.post("/") }
-
       expect(stub).to have_been_requested.times(3)
     end
   end
@@ -127,35 +108,28 @@ RSpec.describe RedfishClient::Connector do
   context "#patch" do
     it "returns response instance" do
       stub_request(:patch, "http://patch.it/")
-
       expect(described_class.new("http://patch.it").patch("/"))
         .to be_a(described_class::Response)
     end
 
     it "sends PATCH requests" do
       stubs = Array.new(6) { |n| stub_request(:patch, "http://pt.ch/#{n}") }
-
       connector = described_class.new("http://pt.ch")
       6.times { |n| connector.patch("/#{n}") }
-
       stubs.each { |s| expect(s).to have_been_requested.once }
     end
 
     it "JSON encodes data" do
       stub = stub_request(:patch, "http://enc.me/")
         .with(body: { "patch" => "data" })
-
       described_class.new("http://enc.me").patch("/", "patch" => "data")
-
       expect(stub).to have_been_requested.once
     end
 
     it "does not cache PATCH requests" do
       stub = stub_request(:patch, "http://no.cache.patch/")
-
       connector = described_class.new("http://no.cache.patch", cache: {})
       2.times { connector.patch("/") }
-
       expect(stub).to have_been_requested.twice
     end
   end
@@ -163,26 +137,21 @@ RSpec.describe RedfishClient::Connector do
   context "#delete" do
     it "returns response instance" do
       stub_request(:delete, "http://delete.us/now")
-
       expect(described_class.new("http://delete.us").delete("/now"))
         .to be_a(described_class::Response)
     end
 
     it "sends DELETE requests" do
       stubs = Array.new(3) { |n| stub_request(:delete, "http://d.it/#{n}") }
-
       connector = described_class.new("http://d.it")
       3.times { |n| connector.delete("/#{n}") }
-
       stubs.each { |s| expect(s).to have_been_requested.once }
     end
 
     it "does not cache DELETE requests" do
       stub = stub_request(:delete, "http://del.cache/now")
-
       connector = described_class.new("http://del.cache", cache: {})
       2.times { connector.delete("/now") }
-
       expect(stub).to have_been_requested.times(2)
     end
   end
@@ -190,28 +159,22 @@ RSpec.describe RedfishClient::Connector do
   context "#reset" do
     it "invalidates complete cache without parameters" do
       cache = { "/1" => 1, "/2" => 2 }
-
       connector = described_class.new("http://a.x", cache: cache)
       connector.reset
-
       expect(cache).to be_empty
     end
 
     it "invalidates selected cache entry" do
       cache = { "/3" => 3, "/4" => 4, "/5" => 5 }
-
       connector = described_class.new("http://dummy.do", cache: cache)
       connector.reset("/4")
-
       expect(cache).to eq("/3" => 3, "/5" => 5)
     end
 
     it "ignores missing cache entries" do
       cache = { "/6" => 6, "/7" => 7 }
-
       connector = described_class.new("http://any.tld", cache: cache)
       connector.reset("/8")
-
       expect(cache).to eq("/6" => 6, "/7" => 7)
     end
   end

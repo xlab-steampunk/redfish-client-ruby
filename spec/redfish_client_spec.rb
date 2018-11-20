@@ -5,63 +5,43 @@ require "json"
 require "redfish_client"
 
 RSpec.describe RedfishClient do
-  before do
-    Excon.defaults[:mock] = true
-    Excon.stub(
-      { path: "/redfish/v1" },
-      { status: 200,
-        body: {
-          "key" => "default_val",
-          "sub" => { "@odata.id" => "/custom" }
-        }.to_json }
-    )
-    Excon.stub(
-      { path: "/custom" },
-      { status: 200, body: { "key" => "custom_val" }.to_json }
-    )
-  end
-
-  after do
-    Excon.stubs.clear
-  end
-
   it "has a version number" do
     expect(RedfishClient::VERSION).not_to be nil
   end
 
   context ".new" do
     it "creates new root resource with default prefix" do
-      client = described_class.new("http://example.com")
-      expect(client.key).to eq("default_val")
+      stub_request(:get, "http://example.com/redfish/v1")
+        .to_return(status: 200, body: '{"a": "b"}')
+      expect(described_class.new("http://example.com").a).to eq("b")
     end
 
     it "creates new root resource with custom prefix" do
-      client = described_class.new("http://example.com", prefix: "/custom")
-      expect(client.key).to eq("custom_val")
+      stub_request(:get, "http://example.com/custom")
+        .to_return(status: 200, body: '{"c": "d"}')
+      expect(described_class.new("http://example.com", prefix: "/custom").c)
+        .to eq("d")
     end
 
     it "creates caching connector by default" do
+      stub_request(:get, "http://example.com/redfish/v1")
+        .to_return(status: 200, body: '{"e": "f"}')
+        .to_raise("Should not be here")
+
       client = described_class.new("http://example.com")
-      expect(client.sub.key).to eq("custom_val")
-
-      Excon.stub(
-        { path: "/custom" },
-        { status: 200, body: { "key" => "new_val" }.to_json }
-      )
-
-      expect(client.sub.key).to eq("custom_val")
+      3.times { expect(client.e).to eq("f") }
     end
 
     it "can create non-caching connector" do
+      stub_request(:get, "http://example.com/redfish/v1")
+        .to_return(status: 200, body: '{"g": {"@odata.id": "/h"}}')
+      stub_request(:get, "http://example.com/h")
+        .to_return(status: 200, body: '{"i": "j"}')
+        .to_return(status: 200, body: '{"i": "k"}')
+
       client = described_class.new("http://example.com", use_cache: false)
-      expect(client.sub.key).to eq("custom_val")
-
-      Excon.stub(
-        { path: "/custom" },
-        { status: 200, body: { "key" => "new_val" }.to_json }
-      )
-
-      expect(client.sub.key).to eq("new_val")
+      expect(client.g.i).to eq("j")
+      expect(client.g.i).to eq("k")
     end
   end
 end

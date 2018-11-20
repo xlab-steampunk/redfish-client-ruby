@@ -25,6 +25,15 @@ Style/Documentation:
 Style/BracesAroundHashParameters:
   EnforcedStyle: context_dependent
 
+Style/TrailingCommaInArguments:
+  EnforcedStyleForMultiline: comma
+
+Style/TrailingCommaInArrayLiteral:
+  EnforcedStyleForMultiline: comma
+
+Style/TrailingCommaInHashLiteral:
+  EnforcedStyleForMultiline: comma
+
 Metrics/AbcSize:
   Max: 20
 
