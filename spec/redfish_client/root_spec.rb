@@ -6,6 +6,41 @@ require "redfish_client/resource"
 require "redfish_client/root"
 
 RSpec.describe RedfishClient::Root do
+  context "#login" do
+    it "sets basic auth info and tries to log in" do
+      connector = double("connector")
+      expect(connector).to receive(:set_auth_info).with(
+        "u", "p", "/t", nil
+      )
+      expect(connector).to receive(:login)
+
+      raw = { "a" => { "@odata.id" => "/t" } }
+      described_class.new(connector, raw: raw).login("u", "p")
+    end
+
+    it "sets session auth info and tries to log in" do
+      connector = double("connector")
+      expect(connector).to receive(:set_auth_info).with(
+        "u", "p", "/t", "/s"
+      )
+      expect(connector).to receive(:login)
+
+      raw = {
+        "a" => { "@odata.id" => "/t" },
+        "Links" => { "Sessions" => { "@odata.id" => "/s" } },
+      }
+      described_class.new(connector, raw: raw).login("u", "p")
+    end
+  end
+
+  context "#logout" do
+    it "delegates logout to connector" do
+      connector = double("connector")
+      expect(connector).to receive(:logout)
+      described_class.new(connector, raw: {}).logout
+    end
+  end
+
   context "#find" do
     it "fetches resource by OData id" do
       connector = double("connector")

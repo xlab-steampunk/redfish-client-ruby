@@ -178,4 +178,108 @@ RSpec.describe RedfishClient::Connector do
       expect(cache).to eq("/6" => 6, "/7" => 7)
     end
   end
+
+  context "#set_auth_info" do
+    it "sets basic auth info" do
+      connector = described_class.new("http://auth.demo")
+      expect { connector.set_auth_info("user", "pass", "/test") }
+        .not_to raise_error
+    end
+
+    it "sets session auth info" do
+      connector = described_class.new("http://auth.demo")
+      expect { connector.set_auth_info("user", "pass", "/test", "/sessions") }
+        .not_to raise_error
+    end
+  end
+
+  context "#login" do
+    it "authenticates using basic auth" do
+      stub = stub_request(:get, "http://auth.demo/test")
+        .with(basic_auth: %w[user pass])
+      connector = described_class.new("http://auth.demo")
+      connector.set_auth_info("user", "pass", "/test")
+      connector.login
+      expect(stub).to have_been_requested.once
+    end
+
+    it "raises error if basic auth fails" do
+      stub_request(:get, "http://auth.demo/test").to_return(status: 401)
+      connector = described_class.new("http://auth.demo")
+      connector.set_auth_info("user", "pass", "/test")
+      expect { connector.login }.to raise_error(described_class::AuthError)
+    end
+
+    it "authenticates using session auth" do
+      stub = stub_request(:post, "http://auth.demo/sessions")
+        .to_return(
+          body: { "@odata.id" => "456" }.to_json,
+          headers: { "X-Auth-Token" => "123" },
+          status: 201,
+        )
+
+      connector = described_class.new("http://auth.demo")
+      connector.set_auth_info("user", "pass", "/test", "/sessions")
+      connector.login
+
+      expect(stub).to have_been_requested.once
+    end
+
+    it "raises error if session auth fails" do
+      stub_request(:post, "http://auth.demo/sessions").to_return(status: 400)
+
+      connector = described_class.new("http://auth.demo")
+      connector.set_auth_info("user", "pass", "/test", "/sessions")
+
+      expect { connector.login }.to raise_error(described_class::AuthError)
+    end
+  end
+
+  context "#logout" do
+    it "removes basic auth info from requests" do
+      stub_request(:get, "http://auth.demo/test")
+        .with(basic_auth: %w[user pass])
+
+      connector = described_class.new("http://auth.demo")
+      connector.set_auth_info("user", "pass", "/test")
+      connector.login
+
+      connector.logout
+    end
+
+    it "removes valid session auth info from requests" do
+      stub_request(:post, "http://auth.demo/sessions")
+        .to_return(
+          body: { "@odata.id" => "/sessions/456" }.to_json,
+          headers: { "X-Auth-Token" => "123" },
+          status: 201,
+        )
+      stub = stub_request(:delete, "http://auth.demo/sessions/456")
+        .to_return(status: 204)
+
+      connector = described_class.new("http://auth.demo")
+      connector.set_auth_info("user", "pass", "/test", "/sessions")
+      connector.login
+      connector.logout
+
+      expect(stub).to have_been_requested
+    end
+
+    it "removes invalid session auth info from requests" do
+      stub_request(:post, "http://auth.demo/sessions")
+        .to_return(body: { "@odata.id" => "/sessions/456" }.to_json,
+                   headers: { "X-Auth-Token" => "123" },
+                   status: 201)
+        .to_raise("should not be here")
+      stub = stub_request(:delete, "http://auth.demo/sessions/456")
+        .to_return(status: 401)
+
+      connector = described_class.new("http://auth.demo")
+      connector.set_auth_info("user", "pass", "/test", "/sessions")
+      connector.login
+      connector.logout
+
+      expect(stub).to have_been_requested
+    end
+  end
 end

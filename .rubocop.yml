@@ -40,3 +40,9 @@ Metrics/AbcSize:
 Metrics/BlockLength:
   Exclude:
     - spec/**/*.rb
+
+Metrics/ClassLength:
+  Max: 500
+
+Metrics/ParameterLists:
+  CountKeywordArgs: false

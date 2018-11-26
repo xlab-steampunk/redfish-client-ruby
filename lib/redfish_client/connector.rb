@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "base64"
 require "excon"
 require "json"
 
@@ -20,12 +21,19 @@ module RedfishClient
     # API.
     Response = Struct.new(:status, :headers, :body)
 
+    # AuthError is raised if the credentials are invalid.
+    class AuthError < StandardError; end
+
     # Default headers, as required by Redfish spec
     # https://redfish.dmtf.org/schemas/DSP0266_1.4.0.html#request-headers
     DEFAULT_HEADERS = {
       "Accept" => "application/json",
       "OData-Version" => "4.0",
     }.freeze
+
+    # Basic and token authentication header names
+    BASIC_AUTH_HEADER = "Authorization"
+    TOKEN_AUTH_HEADER = "X-Auth-Token"
 
     # Create new connector.
     #
@@ -126,6 +134,49 @@ module RedfishClient
       path.nil? ? @cache.clear : @cache.delete(path)
     end
 
+    # Set authentication-related variables.
+    #
+    # Last parameter controls the kind of login connector will perform. If
+    # session_path is `nil`, basic authentication will be used, otherwise
+    # connector will use session-based authentication.
+    #
+    # Note that actual login is done lazily. If you need to check for
+    # credential validity, call #{login} method.
+    #
+    # @param username [String] API username
+    # @param password [String] API password
+    # @param auth_test_path [String] API path to test credential's validity
+    # @param session_path [String, nil] API session path
+    def set_auth_info(username, password, auth_test_path, session_path = nil)
+      @username = username
+      @password = password
+      @auth_test_path = auth_test_path
+      @session_path = session_path
+    end
+
+    # Authenticate against the service.
+    #
+    # Calling this method will try to authenticate against API using
+    # credentials provided by #{set_auth_info} call.
+    # If authentication fails, # {AuthError} will be raised.
+    #
+    # @raise [AuthError] if credentials are invalid
+    def login
+      @session_path ? session_login : basic_login
+    end
+
+    # Sign out of the service.
+    def logout
+      # We bypass do_request here because we do not want any retries on 401
+      # when doing logout.
+      if @session_oid
+        params = prepare_request_params(:delete, @session_oid)
+        @connection.request(params)
+        @session_oid = nil
+      end
+      remove_headers([BASIC_AUTH_HEADER, TOKEN_AUTH_HEADER])
+    end
+
     private
 
     def do_request(params)
@@ -142,6 +193,41 @@ module RedfishClient
         params[:headers] = @headers
       end
       params
+    end
+
+    def session_login
+      # We bypass do_request here because we do not want any retries on 401
+      # when doing login.
+      params = prepare_request_params(:post, @session_path,
+                                      "UserName" => @username,
+                                      "Password" => @password)
+      r = @connection.request(params)
+      raise_invalid_auth_error unless r.status == 201
+
+      token = r.data[:headers][TOKEN_AUTH_HEADER]
+      add_headers(TOKEN_AUTH_HEADER => token)
+      @session_oid = JSON.parse(r.data[:body])["@odata.id"]
+    end
+
+    def basic_login
+      payload = Base64.encode64("#{@username}:#{@password}").strip
+      add_headers(BASIC_AUTH_HEADER => "Basic #{payload}")
+      return if auth_valid?
+
+      remove_headers([BASIC_AUTH_HEADER])
+      raise_invalid_auth_error
+    end
+
+    def raise_invalid_auth_error
+      raise AuthError, "Invalid credentials"
+    end
+
+    def auth_valid?
+      # We bypass do_request here because we do not want any retries on 401
+      # when checking authentication headers.
+      reset(@auth_test_path) # Do not want to see cached response
+      params = prepare_request_params(:get, @auth_test_path)
+      @connection.request(params).status == 200
     end
   end
 end

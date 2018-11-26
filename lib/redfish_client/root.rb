@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "base64"
-require "json"
 require "server_sent_events"
 
 require "redfish_client/event_listener"
@@ -11,41 +9,6 @@ module RedfishClient
   # Root resource represents toplevel entry point into Redfish service data.
   # Its main purpose is to provide authentication support for the API.
   class Root < Resource
-    # AuthError is raised if the user session cannot be created.
-    class AuthError < StandardError; end
-
-    # Basic and token authentication headers.
-    BASIC_AUTH_HEADER = "Authorization"
-    TOKEN_AUTH_HEADER = "X-Auth-Token"
-
-    # Authenticate against the service.
-    #
-    # Calling this method will try to create new session on the service using
-    # provided credentials. If the session creation fails, basic
-    # authentication will be attempted. If basic authentication fails,
-    # {AuthError} will be raised.
-    #
-    # @param username [String] username
-    # @param password [String] password
-    # @raise [AuthError] if user session could not be created
-    def login(username, password)
-      # Since session auth is more secure, we try it first and use basic auth
-      # only if session auth is not available.
-      if session_login_available?
-        session_login(username, password)
-      else
-        basic_login(username, password)
-      end
-    end
-
-    # Sign out of the service.
-    #
-    # If the session could not be deleted, {AuthError} will be raised.
-    def logout
-      session_logout
-      basic_logout
-    end
-
     # Find Redfish service object by OData ID field.
     #
     # @param oid [String] Odata id of the resource
@@ -77,47 +40,38 @@ module RedfishClient
       EventListener.new(ServerSentEvents.create_client(address))
     end
 
+    # Authenticate against the service.
+    #
+    # Calling this method will select the appropriate method of authentication
+    # and try to login using provided credentials.
+    #
+    # @param username [String] username
+    # @param password [String] password
+    # @raise [RedfishClient::AuthenticatedConnector::AuthError] if user
+    #   session could not be authenticated
+    def login(username, password)
+      @connector.set_auth_info(
+        username, password, auth_test_path, session_path
+      )
+      @connector.login
+    end
+
+    # Sign out of the service.
+    def logout
+      @connector.logout
+    end
+
     private
 
-    def session_login_available?
-      !raw.dig("Links", "Sessions").nil?
-    end
-
-    def session_login(username, password)
-      r = @connector.post(
-        raw["Links"]["Sessions"]["@odata.id"],
-        "UserName" => username, "Password" => password,
-      )
-      raise AuthError, "Invalid credentials" unless r.status == 201
-
-      session_logout
-
-      payload = r.headers[TOKEN_AUTH_HEADER]
-      @connector.add_headers(TOKEN_AUTH_HEADER => payload)
-      @session = Resource.new(@connector, raw: JSON.parse(r.body))
-    end
-
-    def session_logout
-      return unless @session
-      r = @session.delete
-      raise AuthError unless r.status == 204
-      @session = nil
-      @connector.remove_headers([TOKEN_AUTH_HEADER])
+    def session_path
+      # We access raw values here on purpose, since calling dig on resource
+      # instance would try to download the sessions collection, which would
+      # fail since we are not yet logged in.
+      raw.dig("Links", "Sessions", "@odata.id")
     end
 
     def auth_test_path
-      raw.values.map { |v| v["@odata.id"] }.compact.first
-    end
-
-    def basic_login(username, password)
-      payload = Base64.encode64("#{username}:#{password}").strip
-      @connector.add_headers(BASIC_AUTH_HEADER => "Basic #{payload}")
-      r = @connector.get(auth_test_path)
-      raise AuthError, "Invalid credentials" unless r.status == 200
-    end
-
-    def basic_logout
-      @connector.remove_headers([BASIC_AUTH_HEADER])
+      raw.values.find { |v| v["@odata.id"] }["@odata.id"]
     end
   end
 end
