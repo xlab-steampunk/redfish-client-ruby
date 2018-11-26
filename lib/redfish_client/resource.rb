@@ -17,8 +17,8 @@ module RedfishClient
   #
   # In order to reduce the amount of requests being sent to the service,
   # resource can also utilise caching connector. If we would like to get
-  # fresh values from the service, {#reset} call will flush the cache,
-  # causing next access to retrieve fresh data.
+  # fresh values from the service, {#refresh} call will flush the cache and
+  # retrieve fresh data from the remote.
   class Resource
     # NoODataId error is raised when operation would need OpenData id of the
     # resource to accomplish the task a hand.
@@ -158,6 +158,19 @@ module RedfishClient
     # @raise  [NoODataId] resource has no OpenData id
     def delete
       @connector.delete(get_path("@odata.id", nil))
+    end
+
+    # Refresh resource content from the API
+    #
+    # Caling this method will ensure that the resource data is in sync with
+    # the Redfis API, invalidating any caches as necessary.
+    def refresh
+      return unless self["@odata.id"]
+
+      # TODO(@tadeboro): raise more sensible exception if resource cannot be
+      # refreshed.
+      @connector.reset(self["@odata.id"])
+      initialize_from_service(self["@odata.id"])
     end
 
     private

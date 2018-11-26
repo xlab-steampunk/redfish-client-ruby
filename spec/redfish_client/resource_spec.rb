@@ -265,4 +265,29 @@ RSpec.describe RedfishClient::Resource do
       expect(resource.headers).to eq("a" => "b")
     end
   end
+
+  context "#refresh" do
+    it "fetches fresh data from API" do
+      connector = double("connector")
+      expect(connector).to receive(:reset).with("/")
+      expect(connector).to receive(:get).with("/").and_return(
+        RedfishClient::Connector::Response.new(200, {}, '{"a": 4}'),
+        RedfishClient::Connector::Response.new(200, {}, '{"b": 3}'),
+      )
+      resource = described_class.new(connector, oid: "/")
+
+      expect(resource.a).to eq(4)
+      expect(resource.b).to be_nil
+      resource.refresh
+      expect(resource.a).to be_nil
+      expect(resource.b).to eq(3)
+    end
+
+    it "ignores non-networked resources" do
+      resource = described_class.new(nil, raw: { "a" => "b" })
+      expect(resource.a).to eq("b")
+      resource.refresh
+      expect(resource.a).to eq("b")
+    end
+  end
 end
