@@ -74,6 +74,30 @@ RSpec.describe RedfishClient::Connector do
       expect { 5.times { connector.get("/") } }.not_to raise_error
       expect(stub).to have_been_requested.twice
     end
+
+    it "retries login once if authentication seems bad" do
+      stub_request(:get, "http://retry.si/")
+        .to_return(status: 401)
+        .to_return(status: 200)
+        .to_raise("BAD")
+      stub_request(:get, "http://retry.si/test")
+        .to_return(status: 200)
+      connector = described_class.new("http://retry.si", cache: {})
+      connector.set_auth_info("user", "pass", "/test")
+      connector.get("/")
+    end
+
+    it "retries login once if authentication seems bad and get still fails" do
+      stub_request(:get, "http://retry.si/")
+        .to_return(status: 401)
+        .to_return(status: 401)
+        .to_raise("BAD")
+      stub_request(:get, "http://retry.si/test")
+        .to_return(status: 200)
+      connector = described_class.new("http://retry.si", cache: {})
+      connector.set_auth_info("user", "pass", "/test")
+      connector.get("/")
+    end
   end
 
   context "#post" do

@@ -181,6 +181,10 @@ module RedfishClient
 
     def do_request(params)
       r = @connection.request(params)
+      if r.status == 401
+        login
+        r = @connection.request(params)
+      end
       Response.new(r.status, r.data[:headers], r.data[:body])
     end
 
