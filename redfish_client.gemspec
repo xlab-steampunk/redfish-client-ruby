@@ -32,7 +32,6 @@ Gem::Specification.new do |spec|
   spec.add_runtime_dependency "excon", "~> 0.60"
   spec.add_runtime_dependency "server_sent_events", "~> 0.1"
 
-  spec.add_development_dependency "bundler", "~> 1.16"
   spec.add_development_dependency "rake", ">= 11.0"
   spec.add_development_dependency "rspec", ">= 3.7"
   spec.add_development_dependency "simplecov"
