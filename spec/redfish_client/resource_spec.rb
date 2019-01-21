@@ -39,6 +39,39 @@ RSpec.describe RedfishClient::Resource do
       expect { described_class.new(connector, oid: "/") }
         .to raise_error(described_class::NoResource)
     end
+
+    it "respects fragment part of the oid" do
+      response = RedfishClient::Connector::Response.new(
+        200, {}, '{"@odata.id": "/a", "b": {"c": "d"}}'
+      )
+      connector = double("connector")
+
+      expect(connector).to receive(:get).with("/a").and_return(response)
+      expect(described_class.new(connector, oid: "/a#b").raw)
+        .to eq("@odata.id" => "/a#b", "c" => "d")
+    end
+
+    it "properly indexes into array" do
+      response = RedfishClient::Connector::Response.new(
+        200, {}, '{"@odata.id": "/e", "f": [{"g": "h"}]}'
+      )
+      connector = double("connector")
+
+      expect(connector).to receive(:get).with("/e").and_return(response)
+      expect(described_class.new(connector, oid: "/e#/f/0").raw)
+        .to eq("@odata.id" => "/e#/f/0", "g" => "h")
+    end
+
+    it "uses string representation of integres as hash keys" do
+      response = RedfishClient::Connector::Response.new(
+        200, {}, '{"@odata.id": "/a", "5": {"6": "7"}}'
+      )
+      connector = double("connector")
+
+      expect(connector).to receive(:get).with("/a").and_return(response)
+      expect(described_class.new(connector, oid: "/a#/5").raw)
+        .to eq("@odata.id" => "/a#/5", "6" => "7")
+    end
   end
 
   context "#[]" do

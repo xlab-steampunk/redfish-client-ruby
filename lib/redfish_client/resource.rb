@@ -176,12 +176,25 @@ module RedfishClient
     private
 
     def initialize_from_service(oid)
-      resp = @connector.get(oid)
+      url, fragment = oid.split("#", 2)
+      resp = @connector.get(url)
       raise NoResource unless resp.status == 200
 
-      @raw = JSON.parse(resp.body)
+      @raw = get_fragment(JSON.parse(resp.body), fragment)
       @raw["@odata.id"] = oid
       @headers = resp.headers
+    end
+
+    def get_fragment(data, fragment)
+      # data, /my/0/part -> data["my"][0]["part"]
+      parse_fragment_string(fragment).reduce(data) do |acc, c|
+        acc[acc.is_a?(Array) ? c.to_i : c]
+      end
+    end
+
+    def parse_fragment_string(fragment)
+      # /my/0/part -> ["my", "0", "part"]
+      fragment ? fragment.split("/").reject { |i| i == "" } : []
     end
 
     def get_path(field, path)
