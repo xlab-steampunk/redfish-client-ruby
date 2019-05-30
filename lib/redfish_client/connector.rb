@@ -80,6 +80,22 @@ module RedfishClient
       headers.each { |h| @headers.delete(h) }
     end
 
+    # Issue requests to the service.
+    #
+    # @param mathod [Symbol] HTTP method (:get, :post, :patch or :delete)
+    # @param path [String] path to the resource, relative to the base
+    # @param data [Hash] data to be sent over the socket
+    # @return [Response] response object
+    def request(method, path, data = nil)
+      params = prepare_request_params(method, path, data)
+      r = @connection.request(params)
+      if r.status == 401
+        login
+        r = @connection.request(params)
+      end
+      Response.new(r.status, r.data[:headers], r.data[:body])
+    end
+
     # Issue GET request to service.
     #
     # This method will first try to return cached response if available. If
@@ -91,9 +107,7 @@ module RedfishClient
     def get(path)
       return @cache[path] if @cache[path]
 
-      do_request(prepare_request_params(:get, path)).tap do |r|
-        @cache[path] = r if r.status == 200
-      end
+      request(:get, path).tap { |r| @cache[path] = r if r.status == 200 }
     end
 
     # Issue POST requests to the service.
@@ -102,7 +116,7 @@ module RedfishClient
     # @param data [Hash] data to be sent over the socket, JSON encoded
     # @return [Response] response object
     def post(path, data = nil)
-      do_request(prepare_request_params(:post, path, data))
+      request(:post, path, data)
     end
 
     # Issue PATCH requests to the service.
@@ -111,7 +125,7 @@ module RedfishClient
     # @param data [Hash] data to be sent over the socket
     # @return [Response] response object
     def patch(path, data = nil)
-      do_request(prepare_request_params(:patch, path, data))
+      request(:patch, path, data)
     end
 
     # Issue DELETE requests to the service.
@@ -119,7 +133,7 @@ module RedfishClient
     # @param path [String] path to the resource, relative to the base
     # @return [Response] response object
     def delete(path)
-      do_request(prepare_request_params(:delete, path))
+      request(:delete, path)
     end
 
     # Clear the cached responses.
@@ -167,7 +181,7 @@ module RedfishClient
 
     # Sign out of the service.
     def logout
-      # We bypass do_request here because we do not want any retries on 401
+      # We bypass request here because we do not want any retries on 401
       # when doing logout.
       if @session_oid
         params = prepare_request_params(:delete, @session_oid)
@@ -178,15 +192,6 @@ module RedfishClient
     end
 
     private
-
-    def do_request(params)
-      r = @connection.request(params)
-      if r.status == 401
-        login
-        r = @connection.request(params)
-      end
-      Response.new(r.status, r.data[:headers], r.data[:body])
-    end
 
     def prepare_request_params(method, path, data = nil)
       params = { method: method, path: path }
@@ -200,7 +205,7 @@ module RedfishClient
     end
 
     def session_login
-      # We bypass do_request here because we do not want any retries on 401
+      # We bypass request here because we do not want any retries on 401
       # when doing login.
       params = prepare_request_params(:post, @session_path,
                                       "UserName" => @username,
@@ -227,7 +232,7 @@ module RedfishClient
     end
 
     def auth_valid?
-      # We bypass do_request here because we do not want any retries on 401
+      # We bypass request here because we do not want any retries on 401
       # when checking authentication headers.
       reset(@auth_test_path) # Do not want to see cached response
       params = prepare_request_params(:get, @auth_test_path)

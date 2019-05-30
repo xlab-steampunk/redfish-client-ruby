@@ -215,26 +215,26 @@ RSpec.describe RedfishClient::Resource do
   context "#get" do
     it "sends GET request to the @odata.id endpont by default" do
       connector = double("connector")
-      expect(connector).to receive(:get).with("/a")
+      expect(connector).to receive(:request).with(:get, "/a", nil)
       described_class.new(connector, raw: { "@odata.id" => "/a" }).get
     end
 
     it "sends GET request to the endpoint from selected field" do
       connector = double("connector")
-      expect(connector).to receive(:get).with("/b")
+      expect(connector).to receive(:request).with(:get, "/b", nil)
       described_class.new(connector, raw: { "b" => "/b" }).get(field: "b")
     end
 
     it "sends GET request to the path in presence of field" do
       connector = double("connector")
-      expect(connector).to receive(:get).with("/c")
+      expect(connector).to receive(:request).with(:get, "/c", nil)
       described_class.new(connector, raw: { "b" => "/b" })
         .get(field: "b", path: "/c")
     end
 
     it "sends GET request to the selected path" do
       connector = double("connector")
-      expect(connector).to receive(:get).with("/c")
+      expect(connector).to receive(:request).with(:get, "/c", nil)
       described_class.new(connector, raw: {}).get(path: "/c")
     end
   end
@@ -242,32 +242,32 @@ RSpec.describe RedfishClient::Resource do
   context "#post" do
     it "sends POST request to the @odata.id endpoint by default" do
       connector = double("connector")
-      expect(connector).to receive(:post).with("/a", nil)
+      expect(connector).to receive(:request).with(:post, "/a", nil)
       described_class.new(connector, raw: { "@odata.id" => "/a" }).post
     end
 
     it "sends POST request to the endpoint from selected field" do
       connector = double("connector")
-      expect(connector).to receive(:post).with("/b", nil)
+      expect(connector).to receive(:request).with(:post, "/b", nil)
       described_class.new(connector, raw: { "b" => "/b" }).post(field: "b")
     end
 
     it "sends POST request to the path in presence of field" do
       connector = double("connector")
-      expect(connector).to receive(:post).with("/c", nil)
+      expect(connector).to receive(:request).with(:post, "/c", nil)
       described_class.new(connector, raw: { "b" => "/b" })
         .post(field: "b", path: "/c")
     end
 
     it "sends POST request to the selected path" do
       connector = double("connector")
-      expect(connector).to receive(:post).with("/c", nil)
+      expect(connector).to receive(:request).with(:post, "/c", nil)
       described_class.new(connector, raw: {}).post(path: "/c")
     end
 
     it "passes payload to the connector" do
       connector = double("connector")
-      expect(connector).to receive(:post).with("/c", 3 => 4)
+      expect(connector).to receive(:request).with(:post, "/c", 3 => 4)
       described_class.new(connector, raw: {})
         .post(path: "/c", payload: { 3 => 4 })
     end
@@ -276,32 +276,32 @@ RSpec.describe RedfishClient::Resource do
   context "#patch" do
     it "sends PATCH request to the @odata.id endpoint by default" do
       connector = double("connector")
-      expect(connector).to receive(:patch).with("/e", nil)
+      expect(connector).to receive(:request).with(:patch, "/e", nil)
       described_class.new(connector, raw: { "@odata.id" => "/e" }).patch
     end
 
     it "sends PATCH request to the endpoint from selected field" do
       connector = double("connector")
-      expect(connector).to receive(:patch).with("/f", nil)
+      expect(connector).to receive(:request).with(:patch, "/f", nil)
       described_class.new(connector, raw: { "f" => "/f" }).patch(field: "f")
     end
 
     it "sends PATCH request to the path in presence of field" do
       connector = double("connector")
-      expect(connector).to receive(:patch).with("/h", nil)
+      expect(connector).to receive(:request).with(:patch, "/h", nil)
       described_class.new(connector, raw: { "g" => "/g" })
         .patch(field: "g", path: "/h")
     end
 
     it "sends PATCH request to the selected path" do
       connector = double("connector")
-      expect(connector).to receive(:patch).with("/i", nil)
+      expect(connector).to receive(:request).with(:patch, "/i", nil)
       described_class.new(connector, raw: {}).patch(path: "/i")
     end
 
     it "passes payload to the connector" do
       connector = double("connector")
-      expect(connector).to receive(:patch).with("/j", "k" => "v")
+      expect(connector).to receive(:request).with(:patch, "/j", "k" => "v")
       described_class.new(connector, raw: {})
         .patch(path: "/j", payload: { "k" => "v" })
     end
@@ -310,32 +310,32 @@ RSpec.describe RedfishClient::Resource do
   context "#delete" do
     it "sends DELETE request to the @odata.id endpoint by default" do
       connector = double("connector")
-      expect(connector).to receive(:delete).with("/e", nil)
+      expect(connector).to receive(:request).with(:delete, "/e", nil)
       described_class.new(connector, raw: { "@odata.id" => "/e" }).delete
     end
 
     it "sends DELETE request to the endpoint from selected field" do
       connector = double("connector")
-      expect(connector).to receive(:delete).with("/f", nil)
+      expect(connector).to receive(:request).with(:delete, "/f", nil)
       described_class.new(connector, raw: { "f" => "/f" }).delete(field: "f")
     end
 
     it "sends DELETE request to the path in presence of field" do
       connector = double("connector")
-      expect(connector).to receive(:delete).with("/h", nil)
+      expect(connector).to receive(:request).with(:delete, "/h", nil)
       described_class.new(connector, raw: { "g" => "/g" })
         .delete(field: "g", path: "/h")
     end
 
     it "sends DELETE request to the selected path" do
       connector = double("connector")
-      expect(connector).to receive(:delete).with("/i", nil)
+      expect(connector).to receive(:request).with(:delete, "/i", nil)
       described_class.new(connector, raw: {}).delete(path: "/i")
     end
 
     it "passes payload to the connector" do
       connector = double("connector")
-      expect(connector).to receive(:delete).with("/j", "k" => "v")
+      expect(connector).to receive(:request).with(:delete, "/j", "k" => "v")
       described_class.new(connector, raw: {})
         .delete(path: "/j", payload: { "k" => "v" })
     end

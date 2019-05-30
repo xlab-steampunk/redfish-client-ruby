@@ -110,6 +110,27 @@ module RedfishClient
       JSON.pretty_generate(raw)
     end
 
+    # Issue a requests to the selected endpoint.
+    #
+    # By default, request will be sent to the path, stored in `@odata.id`
+    # field. Source field can be changed by specifying the `field` parameter
+    # when calling this function. Specifying the `path` argument will bypass
+    # the field lookup altogether and issue a request directly to the selected
+    # path.
+    #
+    # If the resource has no lookup field, {NoODataId} error will be raised,
+    # since posting to non-networked resources makes no sense and probably
+    # indicates bug in library consumer.
+    #
+    # @param method [Symbol] HTTP method (:get, :post, :patch or :delete)
+    # @param field [String, Symbol] path lookup field
+    # @param path [String] path to post to
+    # @return [RedfishClient::Response] response
+    # @raise  [NoODataId] resource has no OpenData id
+    def request(method, field, path, payload = nil)
+      @connector.request(method, get_path(field, path), payload)
+    end
+
     # Issue a GET requests to the selected endpoint.
     #
     # By default, GET request will be sent to the path, stored in `@odata.id`
@@ -127,7 +148,7 @@ module RedfishClient
     # @return [Connector::Response] response
     # @raise  [NoODataId] resource has no OpenData id
     def get(field: "@odata.id", path: nil)
-      @connector.get(get_path(field, path))
+      request(:get, field, path)
     end
 
     # Issue a POST requests to the selected endpoint.
@@ -151,7 +172,7 @@ module RedfishClient
     # @return [Connector::Response] response
     # @raise  [NoODataId] resource has no OpenData id
     def post(field: "@odata.id", path: nil, payload: nil)
-      @connector.post(get_path(field, path), payload)
+      request(:post, field, path, payload)
     end
 
     # Issue a PATCH requests to the selected endpoint.
@@ -165,7 +186,7 @@ module RedfishClient
     # @return [Connector::Response] response
     # @raise  [NoODataId] resource has no OpenData id
     def patch(field: "@odata.id", path: nil, payload: nil)
-      @connector.patch(get_path(field, path), payload)
+      request(:patch, field, path, payload)
     end
 
     # Issue a DELETE requests to the endpoint of the resource.
@@ -177,7 +198,7 @@ module RedfishClient
     # @return [Connector::Response] response
     # @raise  [NoODataId] resource has no OpenData id
     def delete(field: "@odata.id", path: nil, payload: nil)
-      @connector.delete(get_path(field, path), payload)
+      request(:delete, field, path, payload)
     end
 
     # Refresh resource content from the API
