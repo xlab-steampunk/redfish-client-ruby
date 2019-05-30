@@ -212,6 +212,33 @@ RSpec.describe RedfishClient::Resource do
     end
   end
 
+  context "#get" do
+    it "sends GET request to the @odata.id endpont by default" do
+      connector = double("connector")
+      expect(connector).to receive(:get).with("/a")
+      described_class.new(connector, raw: { "@odata.id" => "/a" }).get
+    end
+
+    it "sends GET request to the endpoint from selected field" do
+      connector = double("connector")
+      expect(connector).to receive(:get).with("/b")
+      described_class.new(connector, raw: { "b" => "/b" }).get(field: "b")
+    end
+
+    it "sends GET request to the path in presence of field" do
+      connector = double("connector")
+      expect(connector).to receive(:get).with("/c")
+      described_class.new(connector, raw: { "b" => "/b" })
+        .get(field: "b", path: "/c")
+    end
+
+    it "sends GET request to the selected path" do
+      connector = double("connector")
+      expect(connector).to receive(:get).with("/c")
+      described_class.new(connector, raw: {}).get(path: "/c")
+    end
+  end
+
   context "#post" do
     it "sends POST request to the @odata.id endpoint by default" do
       connector = double("connector")

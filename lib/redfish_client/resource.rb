@@ -110,6 +110,26 @@ module RedfishClient
       JSON.pretty_generate(raw)
     end
 
+    # Issue a GET requests to the selected endpoint.
+    #
+    # By default, GET request will be sent to the path, stored in `@odata.id`
+    # field. Source field can be changed by specifying the `field` parameter
+    # when calling this function. Specifying the `path` argument will bypass
+    # the field lookup altogether and issue a GET request directly to the
+    # selected path.
+    #
+    # If the resource has no lookup field, {NoODataId} error will be raised,
+    # since posting to non-networked resources makes no sense and probably
+    # indicates bug in library consumer.
+    #
+    # @param field [String, Symbol] path lookup field
+    # @param path [String] path to post to
+    # @return [Connector::Response] response
+    # @raise  [NoODataId] resource has no OpenData id
+    def get(field: "@odata.id", path: nil)
+      @connector.get(get_path(field, path))
+    end
+
     # Issue a POST requests to the selected endpoint.
     #
     # By default, POST request will be sent to the path, stored in `@odata.id`
