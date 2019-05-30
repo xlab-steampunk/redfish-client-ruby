@@ -308,10 +308,36 @@ RSpec.describe RedfishClient::Resource do
   end
 
   context "#delete" do
-    it "sends DELETE request to the @odata.id endpoint" do
+    it "sends DELETE request to the @odata.id endpoint by default" do
       connector = double("connector")
-      expect(connector).to receive(:delete).with("/d")
-      described_class.new(connector, raw: { "@odata.id" => "/d" }).delete
+      expect(connector).to receive(:delete).with("/e", nil)
+      described_class.new(connector, raw: { "@odata.id" => "/e" }).delete
+    end
+
+    it "sends DELETE request to the endpoint from selected field" do
+      connector = double("connector")
+      expect(connector).to receive(:delete).with("/f", nil)
+      described_class.new(connector, raw: { "f" => "/f" }).delete(field: "f")
+    end
+
+    it "sends DELETE request to the path in presence of field" do
+      connector = double("connector")
+      expect(connector).to receive(:delete).with("/h", nil)
+      described_class.new(connector, raw: { "g" => "/g" })
+        .delete(field: "g", path: "/h")
+    end
+
+    it "sends DELETE request to the selected path" do
+      connector = double("connector")
+      expect(connector).to receive(:delete).with("/i", nil)
+      described_class.new(connector, raw: {}).delete(path: "/i")
+    end
+
+    it "passes payload to the connector" do
+      connector = double("connector")
+      expect(connector).to receive(:delete).with("/j", "k" => "v")
+      described_class.new(connector, raw: {})
+        .delete(path: "/j", payload: { "k" => "v" })
     end
   end
 

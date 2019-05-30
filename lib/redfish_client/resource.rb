@@ -176,8 +176,8 @@ module RedfishClient
     #
     # @return [Connector::Response] response
     # @raise  [NoODataId] resource has no OpenData id
-    def delete
-      @connector.delete(get_path("@odata.id", nil))
+    def delete(field: "@odata.id", path: nil, payload: nil)
+      @connector.delete(get_path(field, path), payload)
     end
 
     # Refresh resource content from the API
