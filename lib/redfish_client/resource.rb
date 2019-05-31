@@ -28,6 +28,9 @@ module RedfishClient
     # resource.
     class NoResource < StandardError; end
 
+    # Timeout error is raised if the async request is not handled in due time.
+    class Timeout < StandardError; end
+
     # Headers, returned from the service when resource has been constructed.
     #
     # @return [Hash] resource headers
@@ -58,6 +61,27 @@ module RedfishClient
       else
         @raw = raw
       end
+    end
+
+    # Wait for the potentially async operation to terminate
+    #
+    # Note that this can be safely called on response from non-async
+    # operations where the function will return immediately and without making
+    # any additional requests to the service.
+    #
+    # @param response [RedfishClient::Response] response
+    # @param retries [Integer] number of retries
+    # @param delay [Integer] number of seconds between retries
+    # @return [RedfishClient::Response] final response
+    # @raise [Timeout] if the operation did not terminate in time
+    def wait(response, retries: 10, delay: 1)
+      retries.times do |_i|
+        return response if response.done?
+
+        sleep(delay)
+        response = get(path: response.monitor)
+      end
+      raise Timeout, "Async operation did not terminate in allotted time"
     end
 
     # Access resource content.
@@ -145,7 +169,7 @@ module RedfishClient
     #
     # @param field [String, Symbol] path lookup field
     # @param path [String] path to post to
-    # @return [Connector::Response] response
+    # @return [RedfishClient::Response] response
     # @raise  [NoODataId] resource has no OpenData id
     def get(field: "@odata.id", path: nil)
       request(:get, field, path)
@@ -169,7 +193,7 @@ module RedfishClient
     # @param field [String, Symbol] path lookup field
     # @param path [String] path to post to
     # @param payload [Hash<String, >] data to send
-    # @return [Connector::Response] response
+    # @return [RedfishClient::Response] response
     # @raise  [NoODataId] resource has no OpenData id
     def post(field: "@odata.id", path: nil, payload: nil)
       request(:post, field, path, payload)
@@ -183,7 +207,7 @@ module RedfishClient
     # @param field [String, Symbol] path lookup field
     # @param path [String] path to patch
     # @param payload [Hash<String, >] data to send
-    # @return [Connector::Response] response
+    # @return [RedfishClient::Response] response
     # @raise  [NoODataId] resource has no OpenData id
     def patch(field: "@odata.id", path: nil, payload: nil)
       request(:patch, field, path, payload)
@@ -195,7 +219,7 @@ module RedfishClient
     # raised, since deleting non-networked resources makes no sense and
     # probably indicates bug in library consumer.
     #
-    # @return [Connector::Response] response
+    # @return [RedfishClient::Response] response
     # @raise  [NoODataId] resource has no OpenData id
     def delete(field: "@odata.id", path: nil, payload: nil)
       request(:delete, field, path, payload)
@@ -218,8 +242,8 @@ module RedfishClient
 
     def initialize_from_service(oid)
       url, fragment = oid.split("#", 2)
-      resp = @connector.get(url)
-      raise NoResource unless resp.status == 200
+      resp = wait(get(path: url))
+      raise NoResource unless [200, 201].include?(resp.status)
 
       @raw = get_fragment(JSON.parse(resp.body), fragment)
       @raw["@odata.id"] = oid

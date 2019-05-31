@@ -44,39 +44,37 @@ RSpec.describe RedfishClient::Root do
   context "#find" do
     it "fetches resource by OData id" do
       connector = double("connector")
-      expect(connector).to receive(:get).with("/find").and_return(
-        RedfishClient::Connector::Response.new(200, nil, '{"f": 8}'),
+      expect(connector).to receive(:request).with(:get, "/f", nil).and_return(
+          RedfishClient::Response.new(200, nil, '{"f": 8}'),
       )
-      expect(described_class.new(connector, raw: {}).find("/find"))
-        .not_to be_nil
+      expect(described_class.new(connector, raw: {}).find("/f")).not_to be_nil
     end
 
     it "returns nil on error" do
       connector = double("connector")
-      expect(connector).to receive(:get).with("/bad").and_return(
-        RedfishClient::Connector::Response.new(404, nil, '{"f": 8}'),
+      expect(connector).to receive(:request).with(:get, "/b", nil).and_return(
+        RedfishClient::Response.new(404, nil, '{"f": 8}'),
       )
-      expect(described_class.new(connector, raw: {}).find("/bad"))
-        .to be_nil
+      expect(described_class.new(connector, raw: {}).find("/b")).to be_nil
     end
   end
 
   context "#find!" do
     it "fetches resource by OData id" do
       connector = double("connector")
-      expect(connector).to receive(:get).with("/find").and_return(
-        RedfishClient::Connector::Response.new(200, nil, '{"f": 8}'),
+      expect(connector).to receive(:request).with(:get, "/f", nil).and_return(
+        RedfishClient::Response.new(200, nil, '{"f": 8}'),
       )
-      expect { described_class.new(connector, raw: {}).find!("/find") }
+      expect { described_class.new(connector, raw: {}).find!("/f") }
         .not_to raise_error
     end
 
     it "raises exception on error" do
       connector = double("connector")
-      expect(connector).to receive(:get).with("/bad").and_return(
-        RedfishClient::Connector::Response.new(500, nil, '{"f": 8}'),
+      expect(connector).to receive(:request).with(:get, "/b", nil).and_return(
+        RedfishClient::Response.new(500, nil, '{"f": 8}'),
       )
-      expect { described_class.new(connector, raw: {}).find!("/bad") }
+      expect { described_class.new(connector, raw: {}).find!("/b") }
         .to raise_error(RedfishClient::Resource::NoResource)
     end
   end

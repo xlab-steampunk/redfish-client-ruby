@@ -5,6 +5,7 @@ require "excon"
 require "json"
 
 require "redfish_client/nil_hash"
+require "redfish_client/response"
 
 module RedfishClient
   # Connector serves as a low-level wrapper around HTTP calls that are used
@@ -15,12 +16,6 @@ module RedfishClient
   # Library users should treat this class as an implementation detail and
   # use higer-level {RedfishClient::Resource} instead.
   class Connector
-    # Response struct.
-    #
-    # This struct is returned from the methods that interact with the remote
-    # API.
-    Response = Struct.new(:status, :headers, :body)
-
     # AuthError is raised if the credentials are invalid.
     class AuthError < StandardError; end
 
