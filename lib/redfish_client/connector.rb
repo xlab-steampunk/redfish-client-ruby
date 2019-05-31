@@ -93,7 +93,7 @@ module RedfishClient
         login
         r = @connection.request(params)
       end
-      Response.new(r.status, r.data[:headers], r.data[:body])
+      Response.new(r.status, downcase_headers(r.data[:headers]), r.data[:body])
     end
 
     # Issue GET request to service.
@@ -192,6 +192,10 @@ module RedfishClient
     end
 
     private
+
+    def downcase_headers(headers)
+      headers.each_with_object({}) { |(k, v), obj| obj[k.downcase] = v }
+    end
 
     def prepare_request_params(method, path, data = nil)
       params = { method: method, path: path }
