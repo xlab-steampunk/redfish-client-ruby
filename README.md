@@ -41,6 +41,46 @@ Minimal program that uses this gem would look something like this:
     root.logout
 
 
+## Handling asynchronous operations
+
+Redfish service can return a 202 status when we request an execution of a
+long-running operation (e.g. updating firmware). We are expected to poll the
+monitor for changes until the job terminates.
+
+Responses in Redfish client have a built-in support for this, so polling the
+service is rather painless:
+
+    # Start the async action
+    response = update_service.Actions["#UpdateService.SimpleUpdate"].post(
+      field: "target", payload: { ... },
+    )
+    # Wait for the termination
+    response = update_service.wait(response)
+    # Do something with response
+
+It is also possible to manually poll the response like this:
+
+    response = update_service.Actions["#UpdateService.SimpleUpdate"].post(
+      field: "target", payload: { ... },
+    )
+    until response.done?
+      # wait a bit
+      response = update_service.get(response.monitor)
+    end
+
+Response is also safe to (de)serialize, which means that the process that
+started the async operation and the process that will wait for it can be
+separate:
+
+    response = update_service.Actions["#UpdateService.SimpleUpdate"].post(
+      field: "target", payload: { ... },
+    )
+    send_response_somewhere(response.to_h)
+
+    # Somewhere else
+    response = Response.from_hash(receive_response_from_somewhere)
+
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then,
