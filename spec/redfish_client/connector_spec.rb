@@ -51,6 +51,41 @@ RSpec.describe RedfishClient::Connector do
       connector.patch("/", "some" => "data")
       expect(stub).to have_been_requested.once
     end
+
+    it "does not cache responses by default" do
+      stub = stub_request(:get, "https://nocache.si/")
+      connector = described_class.new("https://nocache.si")
+      4.times { connector.get("/") }
+      expect(stub).to have_been_requested.times(4)
+    end
+
+    it "caches OK GET responses when instructed" do
+      stub = stub_request(:get, "https://cache.si/")
+      connector = described_class.new("https://cache.si", cache: {})
+      6.times { connector.get("/") }
+      expect(stub).to have_been_requested.once
+    end
+
+    it "does not cache POST requests" do
+      stub = stub_request(:post, "http://no.cache/")
+      connector = described_class.new("http://no.cache", cache: {})
+      3.times { connector.post("/") }
+      expect(stub).to have_been_requested.times(3)
+    end
+
+    it "does not cache PATCH requests" do
+      stub = stub_request(:patch, "http://no.cache.patch/")
+      connector = described_class.new("http://no.cache.patch", cache: {})
+      5.times { connector.patch("/") }
+      expect(stub).to have_been_requested.times(5)
+    end
+
+    it "does not cache DELETE requests" do
+      stub = stub_request(:delete, "http://del.cache/now")
+      connector = described_class.new("http://del.cache", cache: {})
+      4.times { connector.delete("/now") }
+      expect(stub).to have_been_requested.times(4)
+    end
   end
 
   context "#get" do

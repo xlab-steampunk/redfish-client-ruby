@@ -82,13 +82,11 @@ module RedfishClient
     # @param data [Hash] data to be sent over the socket
     # @return [Response] response object
     def request(method, path, data = nil)
-      params = prepare_request_params(method, path, data)
-      r = @connection.request(params)
-      if r.status == 401
-        login
-        r = @connection.request(params)
+      return @cache[path] if method == :get && @cache[path]
+
+      do_request(method, path, data).tap do |r|
+        @cache[path] = r if method == :get && r.status == 200
       end
-      Response.new(r.status, downcase_headers(r.data[:headers]), r.data[:body])
     end
 
     # Issue GET request to service.
@@ -100,9 +98,7 @@ module RedfishClient
     # @param path [String] path to the resource, relative to the base url
     # @return [Response] response object
     def get(path)
-      return @cache[path] if @cache[path]
-
-      request(:get, path).tap { |r| @cache[path] = r if r.status == 200 }
+      request(:get, path)
     end
 
     # Issue POST requests to the service.
@@ -187,6 +183,16 @@ module RedfishClient
     end
 
     private
+
+    def do_request(method, path, data)
+      params = prepare_request_params(method, path, data)
+      r = @connection.request(params)
+      if r.status == 401
+        login
+        r = @connection.request(params)
+      end
+      Response.new(r.status, downcase_headers(r.data[:headers]), r.data[:body])
+    end
 
     def downcase_headers(headers)
       headers.each_with_object({}) { |(k, v), obj| obj[k.downcase] = v }
