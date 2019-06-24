@@ -57,6 +57,13 @@ RSpec.describe RedfishClient::Response do
     end
   end
 
+  context "#to_s" do
+    it "dumps complete response" do
+      expect(described_class.new(200, { "a" => "b" }, "body").to_s)
+        .to eq("Response[status=200, headers={\"a\"=>\"b\"}, body='body']")
+    end
+  end
+
   context ".from_hash" do
     it "deserializes from hash payload" do
       data = { "status" => 202, "headers" => { "a" => "c" }, "body" => "b" }

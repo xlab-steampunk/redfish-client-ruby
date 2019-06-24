@@ -27,6 +27,10 @@ module RedfishClient
       { "status" => status, "headers" => headers, "body" => body }
     end
 
+    def to_s
+      "Response[status=#{status}, headers=#{headers}, body='#{body}']"
+    end
+
     def self.from_hash(data)
       new(*data.values_at("status", "headers", "body"))
     end
