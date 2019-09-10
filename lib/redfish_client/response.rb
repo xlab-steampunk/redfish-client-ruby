@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "uri"
+
 module RedfishClient
   # Response struct.
   #
@@ -20,7 +22,10 @@ module RedfishClient
     end
 
     def monitor
-      done? ? nil : headers["location"]
+      return nil if done?
+
+      uri = URI.parse(headers["location"])
+      [uri.path, uri.query].compact.join("?")
     end
 
     def to_h

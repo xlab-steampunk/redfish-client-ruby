@@ -29,6 +29,18 @@ RSpec.describe RedfishClient::Response do
     it "returns nil on missing location header" do
       expect(described_class.new(200, {}, "b").monitor).to be_nil
     end
+
+    it "strips everything but path and query string from location header" do
+      url = "http://address:12345/path/?query=string"
+      expect(described_class.new(202, { "location" =>  url }, "b").monitor)
+        .to eq("/path/?query=string")
+    end
+
+    it "handles cases where query string is not present" do
+      url = "http://address:12345/path"
+      expect(described_class.new(202, { "location" =>  url }, "b").monitor)
+        .to eq("/path")
+    end
   end
 
   context "#status" do
