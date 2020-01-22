@@ -29,7 +29,7 @@ Gem::Specification.new do |spec|
 
   spec.required_ruby_version = "~> 2.1"
 
-  spec.add_runtime_dependency "excon", "~> 0.60"
+  spec.add_runtime_dependency "excon", "~> 0.71"
   spec.add_runtime_dependency "server_sent_events", "~> 0.1"
 
   spec.add_development_dependency "rake", ">= 11.0"
