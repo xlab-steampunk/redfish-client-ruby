@@ -29,6 +29,7 @@ module RedfishClient
     # Basic and token authentication header names
     BASIC_AUTH_HEADER = "Authorization"
     TOKEN_AUTH_HEADER = "X-Auth-Token"
+    LOCATION_HEADER   = "Location"
 
     # Create new connector.
     #
@@ -218,9 +219,14 @@ module RedfishClient
       r = @connection.request(params)
       raise_invalid_auth_error unless r.status == 201
 
-      token = r.data[:headers][TOKEN_AUTH_HEADER]
+      headers = r.data[:headers]
+      body    = JSON.parse(r.data[:body])
+
+      token = headers[TOKEN_AUTH_HEADER]
       add_headers(TOKEN_AUTH_HEADER => token)
-      @session_oid = JSON.parse(r.data[:body])["@odata.id"]
+
+      @session_oid   = body["@odata.id"] if body.key?("@odata.id")
+      @session_oid ||= headers[LOCATION_HEADER]
     end
 
     def basic_login

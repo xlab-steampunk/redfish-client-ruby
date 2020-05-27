@@ -351,5 +351,23 @@ RSpec.describe RedfishClient::Connector do
 
       expect(stub).to have_been_requested
     end
+
+    it "removes valid location auth info from requests" do
+      stub_request(:post, "http://auth.demo/sessions")
+        .to_return(
+          body: { }.to_json,
+          headers: { "Location" => "/sessions/456" },
+          status: 201,
+        )
+      stub = stub_request(:delete, "http://auth.demo/sessions/456")
+        .to_return(status: 204)
+
+      connector = described_class.new("http://auth.demo")
+      connector.set_auth_info("user", "pass", "/test", "/sessions")
+      connector.login
+      connector.logout
+
+      expect(stub).to have_been_requested
+    end
   end
 end
