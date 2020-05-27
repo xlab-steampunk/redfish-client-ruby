@@ -219,14 +219,21 @@ module RedfishClient
       r = @connection.request(params)
       raise_invalid_auth_error unless r.status == 201
 
-      headers = r.data[:headers]
       body    = JSON.parse(r.data[:body])
+      headers = r.data[:headers]
 
-      token = headers[TOKEN_AUTH_HEADER]
-      add_headers(TOKEN_AUTH_HEADER => token)
+      add_headers(TOKEN_AUTH_HEADER => headers[TOKEN_AUTH_HEADER])
+      save_session_oid!(body, headers)
+    end
 
-      @session_oid   = body["@odata.id"] if body.key?("@odata.id")
-      @session_oid ||= headers[LOCATION_HEADER]
+    def save_session_oid!(body, headers)
+      @session_oid = body["@odata.id"] if body.key?("@odata.id")
+      return if @session_oid
+
+      if headers.key?(LOCATION_HEADER)
+        location = URI.parse(headers[LOCATION_HEADER])
+        @session_oid = [location.path, location.query].compact.join("?")
+      end
     end
 
     def basic_login
