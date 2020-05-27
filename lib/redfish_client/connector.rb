@@ -230,10 +230,10 @@ module RedfishClient
       @session_oid = body["@odata.id"] if body.key?("@odata.id")
       return if @session_oid
 
-      if headers.key?(LOCATION_HEADER)
-        location = URI.parse(headers[LOCATION_HEADER])
-        @session_oid = [location.path, location.query].compact.join("?")
-      end
+      return unless headers.key?(LOCATION_HEADER)
+
+      location = URI.parse(headers[LOCATION_HEADER])
+      @session_oid = [location.path, location.query].compact.join("?")
     end
 
     def basic_login
