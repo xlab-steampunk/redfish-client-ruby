@@ -68,7 +68,7 @@ RSpec.describe RedfishClient::Resource do
         .to eq("@odata.id" => "/e#/f/0", "g" => "h")
     end
 
-    it "uses string representation of integres as hash keys" do
+    it "uses string representation of integers as hash keys" do
       response = RedfishClient::Response.new(
         200, {}, '{"@odata.id": "/a", "5": {"6": "7"}}'
       )
