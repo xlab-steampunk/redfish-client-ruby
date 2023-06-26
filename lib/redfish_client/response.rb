@@ -17,6 +17,10 @@ module RedfishClient
       @body = body
     end
 
+    # Returns wether the request is completed or ongoing. Be aware than completed
+    # doesn't mean completed successfully, and that you still need to check status
+    # for success or failure.
+    # @return [true] if the request was completed
     def done?
       status != 202
     end
