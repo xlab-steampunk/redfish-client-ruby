@@ -254,12 +254,21 @@ RSpec.describe RedfishClient::Connector do
       connector = described_class.new("http://auth.demo")
       expect { connector.set_auth_info("user", "pass", "/test") }
         .not_to raise_error
+      expect(connector.instance_variable_get(:@session_path)).to be_nil
     end
 
     it "sets session auth info" do
       connector = described_class.new("http://auth.demo")
       expect { connector.set_auth_info("user", "pass", "/test", "/sessions") }
         .not_to raise_error
+      expect(connector.instance_variable_get(:@session_path)).to eq('/sessions')
+    end
+
+    it "forces basic auth when requested" do
+      connector = described_class.new("http://auth.demo", use_session: false)
+      expect { connector.set_auth_info("user", "pass", "/test", "/sessions") }
+        .not_to raise_error
+      expect(connector.instance_variable_get(:@session_path)).to be_nil
     end
   end
 
