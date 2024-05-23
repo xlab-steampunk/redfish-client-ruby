@@ -11,10 +11,11 @@ module RedfishClient
   # @param url [String] base URL of Redfish API
   # @param prefix [String] Redfish API prefix
   # @param verify [Boolean] verify certificates for https connections
+  # @param use_session [Boolean] Use a session for authentication
   # @param use_cache [Boolean] cache API responses
-  def self.new(url, prefix: "/redfish/v1", verify: true, use_cache: true)
+  def self.new(url, prefix: "/redfish/v1", verify: true, use_cache: true, use_session: true)
     cache = (use_cache ? Hash : NilHash).new
-    con = Connector.new(url, verify: verify, cache: cache)
+    con = Connector.new(url, verify: verify, cache: cache, use_session: use_session)
     Root.new(con, oid: prefix)
   end
 end

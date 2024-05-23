@@ -47,8 +47,9 @@ module RedfishClient
     #
     # @param url [String] base url of the Redfish service
     # @param verify [Boolean] verify SSL certificate of the service
+    # @param use_session [Boolean] Use a session for authentication
     # @param cache [Object] cache backend
-    def initialize(url, verify: true, cache: nil)
+    def initialize(url, verify: true, cache: nil, use_session: true)
       @url = url
       @headers = DEFAULT_HEADERS.dup
       middlewares = Excon.defaults[:middlewares] +
@@ -57,6 +58,7 @@ module RedfishClient
                               ssl_verify_peer: verify,
                               middlewares: middlewares)
       @cache = cache || NilHash.new
+      @use_session = use_session
     end
 
     # Add HTTP headers to the requests made by the connector.
@@ -157,7 +159,7 @@ module RedfishClient
       @username = username
       @password = password
       @auth_test_path = auth_test_path
-      @session_path = session_path
+      @session_path = @use_session ? session_path : nil
     end
 
     # Authenticate against the service.
