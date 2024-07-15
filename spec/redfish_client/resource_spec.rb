@@ -295,7 +295,7 @@ RSpec.describe RedfishClient::Resource do
 
     it "passes payload to the connector" do
       connector = double("connector")
-      expect(connector).to receive(:request).with(:post, "/c", 3 => 4)
+      expect(connector).to receive(:request).with(:post, "/c", { 3 => 4 })
       described_class.new(connector, raw: {})
         .post(path: "/c", payload: { 3 => 4 })
     end
@@ -356,7 +356,7 @@ RSpec.describe RedfishClient::Resource do
 
     it "passes payload to the connector" do
       connector = double("connector")
-      expect(connector).to receive(:request).with(:patch, "/j", "k" => "v")
+      expect(connector).to receive(:request).with(:patch, "/j", { "k" => "v" })
       described_class.new(connector, raw: {})
         .patch(path: "/j", payload: { "k" => "v" })
     end
@@ -408,7 +408,7 @@ RSpec.describe RedfishClient::Resource do
 
     it "passes payload to the connector" do
       connector = double("connector")
-      expect(connector).to receive(:request).with(:delete, "/j", "k" => "v")
+      expect(connector).to receive(:request).with(:delete, "/j", { "k" => "v" })
       described_class.new(connector, raw: {})
         .delete(path: "/j", payload: { "k" => "v" })
     end
