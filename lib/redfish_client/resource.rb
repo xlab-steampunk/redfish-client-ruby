@@ -228,7 +228,7 @@ module RedfishClient
     # Refresh resource content from the API
     #
     # Caling this method will ensure that the resource data is in sync with
-    # the Redfis API, invalidating any caches as necessary.
+    # the Redfish API, invalidating any caches as necessary.
     def refresh
       return unless self["@odata.id"]
 
