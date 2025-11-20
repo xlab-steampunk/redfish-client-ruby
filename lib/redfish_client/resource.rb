@@ -149,10 +149,14 @@ module RedfishClient
     # @param method [Symbol] HTTP method (:get, :post, :patch or :delete)
     # @param field [String, Symbol] path lookup field
     # @param path [String] path to post to
+    # @param headers [Hash<String, String>] additional headers for this request only
     # @return [RedfishClient::Response] response
     # @raise  [NoODataId] resource has no OpenData id
-    def request(method, field, path, payload = nil)
+    def request(method, field, path, headers = {}, payload = nil)
+      @connector.add_headers(headers) if headers&.any?
       @connector.request(method, get_path(field, path), payload)
+    ensure
+      @connector.remove_headers(headers) if headers&.any?
     end
 
     # Issue a GET requests to the selected endpoint.
@@ -169,10 +173,11 @@ module RedfishClient
     #
     # @param field [String, Symbol] path lookup field
     # @param path [String] path to post to
+    # @param headers [Hash<String, String>] additional headers for this request only
     # @return [RedfishClient::Response] response
     # @raise  [NoODataId] resource has no OpenData id
-    def get(field: "@odata.id", path: nil)
-      request(:get, field, path)
+    def get(field: "@odata.id", path: nil, headers: {})
+      request(:get, field, path, headers)
     end
 
     # Issue a POST requests to the selected endpoint.
@@ -192,11 +197,12 @@ module RedfishClient
     #
     # @param field [String, Symbol] path lookup field
     # @param path [String] path to post to
+    # @param headers [Hash<String, String>] additional headers for this request only
     # @param payload [Hash<String, >] data to send
     # @return [RedfishClient::Response] response
     # @raise  [NoODataId] resource has no OpenData id
-    def post(field: "@odata.id", path: nil, payload: nil)
-      request(:post, field, path, payload)
+    def post(field: "@odata.id", path: nil, headers: {}, payload: nil)
+      request(:post, field, path, headers, payload)
     end
 
     # Issue a PATCH requests to the selected endpoint.
@@ -206,11 +212,12 @@ module RedfishClient
     #
     # @param field [String, Symbol] path lookup field
     # @param path [String] path to patch
+    # @param headers [Hash<String, String>] additional headers for this request only
     # @param payload [Hash<String, >] data to send
     # @return [RedfishClient::Response] response
     # @raise  [NoODataId] resource has no OpenData id
-    def patch(field: "@odata.id", path: nil, payload: nil)
-      request(:patch, field, path, payload)
+    def patch(field: "@odata.id", path: nil, headers: {}, payload: nil)
+      request(:patch, field, path, headers, payload)
     end
 
     # Issue a DELETE requests to the endpoint of the resource.
@@ -219,10 +226,14 @@ module RedfishClient
     # raised, since deleting non-networked resources makes no sense and
     # probably indicates bug in library consumer.
     #
+    # @param field [String, Symbol] path lookup field
+    # @param path [String] path to patch
+    # @param headers [Hash<String, String>] additional headers for this request only
+    # @param payload [Hash<String, >] data to send
     # @return [RedfishClient::Response] response
     # @raise  [NoODataId] resource has no OpenData id
-    def delete(field: "@odata.id", path: nil, payload: nil)
-      request(:delete, field, path, payload)
+    def delete(field: "@odata.id", path: nil, headers: {}, payload: nil)
+      request(:delete, field, path, headers, payload)
     end
 
     # Refresh resource content from the API

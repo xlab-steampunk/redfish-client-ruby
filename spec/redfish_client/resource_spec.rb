@@ -378,6 +378,16 @@ RSpec.describe RedfishClient::Resource do
       expect(described_class.new(connector, raw: {}).patch(path: "/j").done?)
         .to be false
     end
+
+    it "sets and removes additional headers on connector" do
+      headers = { "If-None-Match" => "etag" }
+      connector = double("connector")
+      expect(connector).to receive(:add_headers).with(headers)
+      expect(connector).to receive(:request).with(:patch, "/j", { "k" => "v" })
+      expect(connector).to receive(:remove_headers).with(headers)
+      described_class.new(connector, raw: {})
+        .patch(path: "/j", headers: headers, payload: { "k" => "v" })
+    end
   end
 
   context "#delete" do
