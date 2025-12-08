@@ -222,6 +222,14 @@ RSpec.describe RedfishClient::Resource do
     end
   end
 
+  context "#request" do
+    it "sends specified request with values set to defaults" do
+      connector = double("connector")
+      expect(connector).to receive(:request).with(:get, "/a", nil)
+      described_class.new(connector, raw: { "@odata.id" => "/a" }).request(:get, "@odata.id", nil)
+    end
+  end
+
   context "#get" do
     it "sends GET request to the @odata.id endpont by default" do
       connector = double("connector")
