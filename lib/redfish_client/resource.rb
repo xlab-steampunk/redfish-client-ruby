@@ -42,6 +42,23 @@ module RedfishClient
     # @return [Hash] resource raw data
     attr_reader :raw
 
+    # Get ETag from the response headers or resource property.
+    #
+    # Redfish services may provide ETag in two ways:
+    # 1. HTTP ETag header (preferred)
+    # 2. @odata.etag property in the resource (fallback)
+    #
+    # This method checks both locations, prioritizing the HTTP header.
+    #
+    # @return [String, nil] ETag value or nil if not present
+    def etag
+      # Prefer HTTP header (used for If-Match header)
+      return @headers["etag"] if @headers&.key?("etag")
+
+      # Fallback to @odata.etag property
+      raw["@odata.etag"]
+    end
+
     # Create new resource.
     #
     # Resource can be created either by passing in OpenData identifier or
@@ -151,11 +168,20 @@ module RedfishClient
     # @param path [String] path to post to
     # @param payload Hash<String, >] data to send
     # @param headers [Hash<String, String>] additional headers for this request only
+    # @param etag [String, nil] optional ETag value for If-Match header
     # @return [RedfishClient::Response] response
     # @raise  [NoODataId] resource has no OpenData id
-    def request(method, field, path, payload = nil, headers = nil)
+    def request(method, field, path, payload = nil, headers = nil, etag = nil)
       @connector.add_headers(headers) if headers&.any?
-      @connector.request(method, get_path(field, path), payload)
+      target_path = get_path(field, path)
+
+      # Use etag-aware patch method when etag is provided
+      if method == :patch && etag
+        # Forward ETag value from caller to Connector#patch as keyword argument
+        @connector.patch(target_path, payload, etag: etag)
+      else
+        @connector.request(method, target_path, payload)
+      end
     ensure
       @connector.remove_headers(headers) if headers&.any?
     end
@@ -202,7 +228,7 @@ module RedfishClient
     # @param headers [Hash<String, String>] additional headers for this request only
     # @return [RedfishClient::Response] response
     # @raise  [NoODataId] resource has no OpenData id
-    def post(field: "@odata.id", path: nil,  payload: nil, headers: nil)
+    def post(field: "@odata.id", path: nil, payload: nil, headers: nil)
       request(:post, field, path, payload, headers)
     end
 
@@ -215,10 +241,39 @@ module RedfishClient
     # @param path [String] path to patch
     # @param payload [Hash<String, >] data to send
     # @param headers [Hash<String, String>] additional headers for this request only
+    # @param etag [String, nil] optional ETag value for If-Match header
     # @return [RedfishClient::Response] response
     # @raise  [NoODataId] resource has no OpenData id
-    def patch(field: "@odata.id", path: nil,  payload: nil, headers: nil)
-      request(:patch, field, path, payload, headers)
+    def patch(field: "@odata.id", path: nil, payload: nil, headers: nil, etag: nil)
+      request(:patch, field, path, payload, headers, etag)
+    end
+
+    # Issue a PATCH request using the ETag from this resource.
+    #
+    # This is a convenience method that uses the ETag value obtained when
+    # this resource was retrieved from the service. The resource must be
+    # fetched via GET (e.g., using `client.find()`) before calling this
+    # method, so that the ETag is available in the response headers.
+    #
+    # If no ETag is present in the headers, this method will perform a
+    # regular PATCH without the If-Match header.
+    #
+    # @example Basic usage
+    #   # First, retrieve the resource (GET request with ETag in response)
+    #   system = client.find("/redfish/v1/Systems/1")
+    #
+    #   # Then, update with ETag validation (PATCH with If-Match header)
+    #   system.patch_if_match({ "AssetTag" => "Server-001" })
+    #
+    # @param payload [Hash<String, >] data to send
+    # @param field [String, Symbol] path lookup field
+    # @param path [String] path to patch
+    # @param headers [Hash<String, String>] additional headers for this request only
+    # @return [RedfishClient::Response] response
+    # @raise  [NoODataId] resource has no OpenData id
+    def patch_if_match(payload, field: "@odata.id", path: nil, headers: nil)
+      current_etag = etag
+      patch(field: field, path: path, payload: payload, headers: headers, etag: current_etag)
     end
 
     # Issue a DELETE requests to the endpoint of the resource.

@@ -3,6 +3,7 @@
 require "base64"
 require "excon"
 require "json"
+require "logger"
 
 require "redfish_client/nil_hash"
 require "redfish_client/response"
@@ -113,13 +114,14 @@ module RedfishClient
       request(:post, path, data)
     end
 
-    # Issue PATCH requests to the service.
+    # Issue PATCH requests to the service with optional ETag support.
     #
     # @param path [String] path to the resource, relative to the base
     # @param data [Hash] data to be sent over the socket
+    # @param options [Hash] optional parameters including :etag
     # @return [Response] response object
-    def patch(path, data = nil)
-      request(:patch, path, data)
+    def patch(path, data = nil, **options)
+      etag_handler(path, data, options[:etag])
     end
 
     # Issue DELETE requests to the service.
@@ -186,6 +188,89 @@ module RedfishClient
     end
 
     private
+
+    # ETag handler containing workarounds for PATCH requests with ETags.
+    # Based on sushy's _etag_handler implementation.
+    #
+    # @param path [String] path to the resource
+    # @param data [Hash] data to be sent
+    # @param etag [String, nil] ETag value
+    # @return [Response] response object
+    def etag_handler(path, data, etag)
+      # Guard clause: if no ETag provided, perform regular PATCH and return
+      return request(:patch, path, data) if etag.nil? || etag.empty?
+
+      logger = Logger.new($stdout)
+      logger.level = Logger::WARN
+
+      # Prepare headers with If-Match
+      headers_to_add = { "If-Match" => etag }
+      add_headers(headers_to_add)
+
+      begin
+        # First attempt with the provided ETag
+        response = request(:patch, path, data)
+
+        # Handle 412 Precondition Failed with retry logic.
+        # Some hardware vendors have non-standard Redfish implementations
+        # that incorrectly handle ETags (e.g., rejecting weak ETags or
+        # requiring ETags to be omitted even when provided correctly).
+        # To work around these vendor-specific issues, we retry with:
+        # 1. Converting weak ETag (W/"...") to strong ETag ("...")
+        # 2. Removing the If-Match header entirely
+        # This approach is based on similar workarounds implemented in
+        # the Sushy library:
+        # https://github.com/openstack/sushy
+        # Other statuses (success or errors like 400, 500) should be
+        # returned as-is for the caller to handle appropriately.
+        unless response.status == 412
+          return response
+        end
+
+        logger.warn("Initial request with eTag failed: HTTP 412")
+
+        # Check for weak ETag (W/"...")
+        weak_etag_pattern = /^(W\/)(".+")$/
+        match = weak_etag_pattern.match(etag)
+
+        if match
+          logger.info("Weak eTag provided with original request to #{path}. " \
+                     "Attempting conversion to strong eTag and re-trying.")
+
+          # Try with strong ETag (remove W/ prefix)
+          strong_etag = match[2]
+          remove_headers(["If-Match"])
+          add_headers("If-Match" => strong_etag)
+
+          response = request(:patch, path, data)
+
+          unless response.status == 412
+            return response
+          end
+
+          logger.warn("Request to #{path} with weak eTag converted to " \
+                     "strong eTag also failed. Making the final attempt " \
+                     "with no eTag specified.")
+        else
+          # ETag is strong, retry without it
+          logger.warn("Strong eTag provided - retrying request to #{path} " \
+                     "with eTag removed.")
+        end
+
+        # Final attempt without If-Match header
+        remove_headers(["If-Match"])
+        response = request(:patch, path, data)
+
+        if response.status == 412
+          logger.error("Final re-try with eTag removed has also failed with HTTP 412")
+        end
+
+        response
+      ensure
+        # Clean up headers
+        remove_headers(headers_to_add.keys) unless headers_to_add.empty?
+      end
+    end
 
     def do_request(method, path, data)
       params = prepare_request_params(method, path, data)

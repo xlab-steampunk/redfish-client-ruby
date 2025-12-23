@@ -461,6 +461,81 @@ RSpec.describe RedfishClient::Resource do
     end
   end
 
+  context "#etag" do
+    it "returns ETag from headers" do
+      connector = double("connector")
+      expect(connector).to receive(:request).with(:get, "/r", nil).and_return(
+        RedfishClient::Response.new(200, { "etag" => "\"v1\"" }, '{"@odata.id": "/r"}'),
+      )
+      resource = described_class.new(connector, oid: "/r")
+      expect(resource.etag).to eq("\"v1\"")
+    end
+
+    it "returns nil when headers are not present" do
+      resource = described_class.new(nil, raw: { "a" => "b" })
+      expect(resource.etag).to be_nil
+    end
+
+    it "returns nil when ETag header is not present" do
+      connector = double("connector")
+      expect(connector).to receive(:request).with(:get, "/r", nil).and_return(
+        RedfishClient::Response.new(200, {}, '{"@odata.id": "/r"}'),
+      )
+      resource = described_class.new(connector, oid: "/r")
+      expect(resource.etag).to be_nil
+    end
+
+    it "returns ETag from @odata.etag property when header is not present" do
+      connector = double("connector")
+      expect(connector).to receive(:request).with(:get, "/r", nil).and_return(
+        RedfishClient::Response.new(200, {}, '{"@odata.id": "/r", "@odata.etag": "\"v2\""}'),
+      )
+      resource = described_class.new(connector, oid: "/r")
+      expect(resource.etag).to eq("\"v2\"")
+    end
+
+    it "prefers ETag header over @odata.etag property" do
+      connector = double("connector")
+      expect(connector).to receive(:request).with(:get, "/r", nil).and_return(
+        RedfishClient::Response.new(200, { "etag" => "\"v1\"" }, '{"@odata.id": "/r", "@odata.etag": "\"v2\""}'),
+      )
+      resource = described_class.new(connector, oid: "/r")
+      expect(resource.etag).to eq("\"v1\"")
+    end
+  end
+
+  context "#patch_if_match" do
+    it "uses current ETag automatically" do
+      connector = double("connector")
+      expect(connector).to receive(:request).with(:get, "/r", nil).and_return(
+        RedfishClient::Response.new(200, { "etag" => "\"v1\"" }, '{"@odata.id": "/r"}'),
+      )
+      resource = described_class.new(connector, oid: "/r")
+
+      expect(connector).to receive(:patch).with("/r", { "key" => "value" }, etag: "\"v1\"").and_return(
+        RedfishClient::Response.new(200, {}, "{}"),
+      )
+
+      response = resource.patch_if_match({ "key" => "value" })
+      expect(response.status).to eq(200)
+    end
+
+    it "works without ETag if not present" do
+      connector = double("connector")
+      expect(connector).to receive(:request).with(:get, "/r", nil).and_return(
+        RedfishClient::Response.new(200, {}, '{"@odata.id": "/r"}'),
+      )
+      resource = described_class.new(connector, oid: "/r")
+
+      expect(connector).to receive(:request).with(:patch, "/r", { "key" => "value" }).and_return(
+        RedfishClient::Response.new(200, {}, "{}"),
+      )
+
+      response = resource.patch_if_match({ "key" => "value" })
+      expect(response.status).to eq(200)
+    end
+  end
+
   context "#refresh" do
     it "fetches fresh data from API" do
       connector = double("connector")

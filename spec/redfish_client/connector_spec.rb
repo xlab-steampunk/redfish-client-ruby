@@ -48,7 +48,7 @@ RSpec.describe RedfishClient::Connector do
       stub = stub_request(:patch, "http://patch.me/")
         .with(headers: { "Content-Type" => "application/json" } )
       connector = described_class.new("http://patch.me", cache: {})
-      connector.patch("/", "some" => "data")
+      connector.request(:patch, "/", { "some" => "data" })
       expect(stub).to have_been_requested.once
     end
 
@@ -192,7 +192,7 @@ RSpec.describe RedfishClient::Connector do
     it "JSON encodes data" do
       stub = stub_request(:patch, "http://enc.me/")
         .with(body: { "patch" => "data" })
-      described_class.new("http://enc.me").patch("/", "patch" => "data")
+      described_class.new("http://enc.me").patch("/", { "patch" => "data" })
       expect(stub).to have_been_requested.once
     end
 
@@ -201,6 +201,48 @@ RSpec.describe RedfishClient::Connector do
       connector = described_class.new("http://no.cache.patch", cache: {})
       2.times { connector.patch("/") }
       expect(stub).to have_been_requested.twice
+    end
+
+    it "sends If-Match header when etag is provided" do
+      stub = stub_request(:patch, "http://etag.test/")
+        .with(headers: { "If-Match" => "\"v1\"" })
+      described_class.new("http://etag.test").patch("/", { "key" => "value" }, etag: "\"v1\"")
+      expect(stub).to have_been_requested.once
+    end
+
+    it "retries with strong ETag on 412 when weak ETag is provided" do
+      # First attempt with weak ETag returns 412
+      stub1 = stub_request(:patch, "http://weak.etag/")
+        .with(headers: { "If-Match" => "W/\"v1\"" })
+        .to_return(status: 412, body: "{}", headers: {})
+
+      # Second attempt with strong ETag succeeds
+      stub2 = stub_request(:patch, "http://weak.etag/")
+        .with(headers: { "If-Match" => "\"v1\"" })
+        .to_return(status: 200, body: "{}", headers: {})
+
+      response = described_class.new("http://weak.etag").patch("/", { "key" => "value" }, etag: "W/\"v1\"")
+
+      expect(stub1).to have_been_requested.once
+      expect(stub2).to have_been_requested.once
+      expect(response.status).to eq(200)
+    end
+
+    it "retries without ETag on persistent 412 with strong ETag" do
+      # First attempt with strong ETag returns 412
+      stub1 = stub_request(:patch, "http://retry.etag/")
+        .with(headers: { "If-Match" => "\"v1\"" })
+        .to_return(status: 412, body: "{}", headers: {})
+
+      # Second attempt without If-Match succeeds
+      stub2 = stub_request(:patch, "http://retry.etag/")
+        .to_return(status: 200, body: "{}", headers: {})
+
+      response = described_class.new("http://retry.etag").patch("/", { "key" => "value" }, etag: "\"v1\"")
+
+      expect(stub1).to have_been_requested.once
+      expect(stub2).to have_been_requested.once
+      expect(response.status).to eq(200)
     end
   end
 
