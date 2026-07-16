@@ -324,6 +324,19 @@ RSpec.describe RedfishClient::Connector do
       expect(stub).to have_been_requested.once
     end
 
+    it "does not add newlines to long basic auth credentials" do
+      password = "p" * 100
+      expected_header = "Basic #{Base64.strict_encode64("user:#{password}")}"
+      stub = stub_request(:get, "http://auth.demo/test")
+        .with(headers: { "Authorization" => expected_header })
+
+      connector = described_class.new("http://auth.demo")
+      connector.set_auth_info("user", password, "/test")
+      connector.login
+
+      expect(stub).to have_been_requested.once
+    end
+
     it "raises error if basic auth fails" do
       stub_request(:get, "http://auth.demo/test").to_return(status: 401)
       connector = described_class.new("http://auth.demo")
