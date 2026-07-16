@@ -324,7 +324,7 @@ module RedfishClient
     end
 
     def basic_login
-      payload = Base64.encode64("#{@username}:#{@password}").strip
+      payload = Base64.strict_encode64("#{@username}:#{@password}")
       add_headers(BASIC_AUTH_HEADER => "Basic #{payload}")
       return if auth_valid?
 
